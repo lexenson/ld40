@@ -317,8 +317,8 @@ function render() {
   function renderMoney (money) {
     ctx.font = '20px Courier'
     ctx.fillStyle='black'
-    ctx.fillText(`current:   $${money.current}`,620,20);
-    ctx.fillText(`delivered: $${money.delivered}`,620,40);
+    ctx.fillText(`current:   $${money.current}`,600,20);
+    ctx.fillText(`delivered: $${money.delivered}`,600,40);
   }
 
   function renderCar (position, direction, color) {
