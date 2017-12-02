@@ -1,7 +1,3 @@
-const {
-  createStore, combineReducers
-} = Redux
-
 const CANVAS = document.getElementById('canvas')
 let ctx = CANVAS.getContext('2d')
 
@@ -62,7 +58,7 @@ const pfGrid = new PF.Grid(
 )
 const finder = new PF.AStarFinder()
 
-const initialState = {
+const state = {
   money: {
     current: 0,
     delivered: 0
@@ -87,181 +83,142 @@ const initialState = {
     }
   ],
   player: {
-    direction: 'left',
-    position: {
+    direction: {
       x: 1,
-      y: 12
+      y: 0
+    },
+    speed: 2,
+    position: {
+      x: 16,
+      y: 192
     }
   },
   gangsters: [
     {
-      direction: 'left',
+      direction: {
+        x: 1,
+        y: 0
+      },
+      speed: 1,
       position: {
-        x: 13,
-        y: 12
-      }
-    },
-    {
-      direction: 'right',
-      position: {
-        x: 3,
-        y: 21
+        x: 208,
+        y: 192
       }
     }
   ]
 }
 
-let store = createStore(reducer)
 
-render()
-store.subscribe(render)
+handleInput()
+gameLoop()
 
-handleInput(store)
-
-function handleInput(store) {
+function handleInput() {
+  window.addEventListener('keydown', event => {
+    switch (event.key) {
+      case 'ArrowDown':
+        arrowInput({ deltaX: 0, deltaY: 1})
+        break
+      case 'ArrowUp':
+        arrowInput({ deltaX: 0, deltaY: -1})      
+        break
+      case 'ArrowLeft':
+        arrowInput({ deltaX: -1, deltaY: 0})
+        break
+      case 'ArrowRight':
+        arrowInput({ deltaX: 1, deltaY: 0})      
+    }
+  })
   window.addEventListener('keyup', event => {
     switch (event.key) {
       case 'ArrowDown':
-        return store.dispatch({
-          type: 'ARROW_INPUT',
-          payload: {
-            deltaX: 0,
-            deltaY: +1
-          }
-        })
-      case 'ArrowUp':
-        return store.dispatch({
-          type: 'ARROW_INPUT',
-          payload: {
-            deltaX: 0,
-            deltaY: -1
-          }
-        })
+      case 'ArrowUp':  
       case 'ArrowLeft':
-        return store.dispatch({
-          type: 'ARROW_INPUT',
-          payload: {
-            deltaX: -1,
-            deltaY: 0
-          }
-        })
       case 'ArrowRight':
-        return store.dispatch({
-          type: 'ARROW_INPUT',
-          payload: {
-            deltaX: +1,
-            deltaY: 0
-          }
-        })
+        state.player.speed = 0  
     }
   })
+
+  
+  function arrowInput ({ deltaX, deltaY}) {
+    state.player.speed = 2
+    state.player.direction = { x: deltaX, y: deltaY}
+  }
 }
 
-function reducer(state = initialState, action) {
-  const {player, gangsters, shops, banks, money} = state
-  switch (action.type) {
-    case 'ARROW_INPUT': return arrowInput()
-    default:
-      return state
+function gameLoop() {
+  window.requestAnimationFrame(step)
+
+  let start = 0
+
+  function step(timestamp) {
+    if( timestamp - start > 1000.0/60.0) {
+      render()
+      update()
+      start = timestamp
+    }
+    window.requestAnimationFrame(step)
+  }
+}
+
+function update() {
+  updatePlayer()
+  updateGangsters()
+}
+
+function updatePlayer() {
+  const newPosition = {
+    x: state.player.position.x + state.player.speed * state.player.direction.x,
+    y: state.player.position.y + state.player.speed * state.player.direction.y
   }
 
-  function arrowInput () {
-    const newPosition = {
-      x: player.position.x + action.payload.deltaX,
-      y: player.position.y + action.payload.deltaY
-    }
-
-    const nextTile = world[newPosition.y][newPosition.x]
-    if (nextTile.type === 'street') {
-      return {
-        ...state,
-        player: movePlayer(newPosition),
-        gangsters: moveGangsters()
-      }
-    }
-    if (nextTile.type === 'building') {
-      return buildingCollision(newPosition)
-    }
-    return state
-  }
-
-  function moveGangsters () {
-    return gangsters.map(gangster => {
-      const path = finder.findPath(
-        gangster.position.x,
-        gangster.position.y,
-        player.position.x,
-        player.position.y,
-        pfGrid.clone()
-      )
-      if (path.length < 2) return gangster
-      const nextPosition = {
-        x: path[1][0],
-        y: path[1][1]
-      }
-      const deltaX = gangster.position.x - nextPosition.x
-      const deltaY = gangster.position.y - nextPosition.y
-      const direction = getDirection(deltaX, deltaY)
-      return {...gangster, position: nextPosition, direction}
-    })
+  const nextTile = world[Math.floor(newPosition.y / 16)][Math.floor(newPosition.x / 16)]
+  if (nextTile.type === 'street') {
+    movePlayer(newPosition)
   }
 
   function movePlayer (newPosition) {
-    const oldPosition = player.position
+    const oldPosition = state.player.position
     const deltaX = newPosition.x - oldPosition.x
     const deltaY = newPosition.y - oldPosition.y
-    const direction = getDirection(deltaX, deltaY)
-    return {...player, position: newPosition, direction}
-  }
-
-  function buildingCollision (newPosition) {
-    const shop = shops.find(shop => isSamePosition(shop.position, newPosition))
-    if (shop) {
-      return pickupMoney(shop.id)
-    }
-    const bank = banks.find(bank => isSamePosition(bank.position, newPosition))
-    if (bank) {
-      return dropoffMoney(bank.id)
-    }
-    return state
-  }
-
-  function pickupMoney (shopId) {
-    const pickupShop = shops.find(shop => shop.id === shopId)
-    const newShops = shops.map(shop => {
-      if (shop.id !== action.payload.id) return shop
-      return {...shop, money: 0}
-    })
-    return {
-      ...state,
-      shops: newShops,
-      money: {...money, current: money.current + pickupShop.money}
-    }
-  }
-
-  function dropoffMoney (bankId) {
-    return {
-      ...state,
-      money: {
-        ...money,
-        current: 0,
-        delivered: money.delivered + money.current
-      }
-    }
+    state.player.position = newPosition
   }
 }
 
-function getDirection (deltaX, deltaY) {
-  if (deltaX === 1) return 'right'
-  if (deltaX === -1) return 'left'
-  if (deltaY === 1) return 'up'
-  if (deltaY === -1) return 'down'
-  return 'up'
+function updateGangsters () {
+  state.gangsters.forEach(gangster => {
+    if (!gangster.goal || (Math.floor(gangster.position.x / 16) === gangster.goal.x && Math.floor(gangster.position.y / 16) === gangster.goal.y)) {
+      const path = finder.findPath(
+        Math.floor(gangster.position.x / 16),
+        Math.floor(gangster.position.y / 16),
+        Math.floor(state.player.position.x / 16),
+        Math.floor(state.player.position.y / 16),
+        pfGrid.clone()
+      )
+      console.log(path)
+      if (path.length > 1) {
+        const nextPosition = {
+          x: path[1][0],
+          y: path[1][1]
+        }
+        gangster.goal = nextPosition
+        gangster.direction = { 
+          x: nextPosition.x - Math.floor(gangster.position.x / 16),
+          y: nextPosition.y - Math.floor(gangster.position.y / 16)
+        }
+      }
+      else {
+        gangster.goal = undefined
+      }
+    }
+      gangster.position = { 
+        x: gangster.position.x + gangster.direction.x * gangster.speed, 
+        y: gangster.position.y + gangster.direction.y * gangster.speed, 
+      }
+    }
+  )
 }
 
 function render() {
-  const state = store.getState()
-
   ctx.clearRect(0, 0, CANVAS.width, CANVAS.height)
 
   renderWorld(world)
@@ -323,17 +280,12 @@ function render() {
 
   function renderCar (position, direction, color) {
     ctx.beginPath()
-    switch(direction) {
-      case 'up':
-      case 'down':
-        ctx.rect(position.x * TILE_SIZE + CAR_OFFSET_X, position.y * TILE_SIZE + CAR_OFFSET_Y,
-          CAR_WIDTH, CAR_HEIGHT)
-        break
-      case 'left':
-      case 'right':
-        ctx.rect(position.x * TILE_SIZE + CAR_OFFSET_Y, position.y * TILE_SIZE + CAR_OFFSET_X,
-          CAR_HEIGHT, CAR_WIDTH)
+    if( direction.y !== 0) {
+      ctx.rect(position.x  + CAR_OFFSET_X, position.y + CAR_OFFSET_Y, CAR_WIDTH, CAR_HEIGHT)
+    } else {
+      ctx.rect(position.x + CAR_OFFSET_Y, position.y + CAR_OFFSET_X, CAR_HEIGHT, CAR_WIDTH)
     }
+
     ctx.fillStyle=color
     ctx.fill()
   }
@@ -344,8 +296,4 @@ function worldShorthandToType(shorthand) {
   return {
     type: 'street'
   }
-}
-
-function isSamePosition (positionA, positionB) {
-  return positionA.x === positionB.x && positionA.y === positionB.y
 }
