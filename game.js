@@ -67,8 +67,10 @@ const initialState = {
     current: 0,
     delivered: 0
   },
-  stores: [
+  shops: [
     {
+      id: 0,
+      money: 100,
       position: {
         x: 3,
         y: 0
@@ -77,6 +79,7 @@ const initialState = {
   ],
   banks: [
     {
+      id: 0,
       position: {
         x: 7,
         y: 0
@@ -120,7 +123,7 @@ function handleInput(store) {
     switch (event.key) {
       case 'ArrowDown':
         return store.dispatch({
-          type: 'MOVE_PLAYER',
+          type: 'ARROW_INPUT',
           payload: {
             deltaX: 0,
             deltaY: +1
@@ -128,7 +131,7 @@ function handleInput(store) {
         })
       case 'ArrowUp':
         return store.dispatch({
-          type: 'MOVE_PLAYER',
+          type: 'ARROW_INPUT',
           payload: {
             deltaX: 0,
             deltaY: -1
@@ -136,7 +139,7 @@ function handleInput(store) {
         })
       case 'ArrowLeft':
         return store.dispatch({
-          type: 'MOVE_PLAYER',
+          type: 'ARROW_INPUT',
           payload: {
             deltaX: -1,
             deltaY: 0
@@ -144,7 +147,7 @@ function handleInput(store) {
         })
       case 'ArrowRight':
         return store.dispatch({
-          type: 'MOVE_PLAYER',
+          type: 'ARROW_INPUT',
           payload: {
             deltaX: +1,
             deltaY: 0
@@ -155,57 +158,97 @@ function handleInput(store) {
 }
 
 function reducer(state = initialState, action) {
-  const {player, gangsters} = state
+  const {player, gangsters, shops, banks, money} = state
   switch (action.type) {
-    case 'MOVE_PLAYER':
-      const newGangsters = moveGangsters(gangsters, player)
-      const newPlayer = movePlayer(
-        player,
-        action.payload.deltaX,
-        action.payload.deltaY
-      )
-
-      return {...state,
-        player: newPlayer,
-        gangsters: newGangsters
-      }
+    case 'ARROW_INPUT': return arrowInput()
     default:
       return state
   }
-}
 
-function moveGangsters (gangsters, player) {
-  return gangsters.map(gangster => {
-    const path = finder.findPath(
-      gangster.position.x,
-      gangster.position.y,
-      player.position.x,
-      player.position.y,
-      pfGrid.clone()
-    )
-    if (path.length < 2) return gangster
-    const nextPosition = {
-      x: path[1][0],
-      y: path[1][1]
+  function arrowInput () {
+    const newPosition = {
+      x: player.position.x + action.payload.deltaX,
+      y: player.position.y + action.payload.deltaY
     }
-    const deltaX = gangster.position.x - nextPosition.x
-    const deltaY = gangster.position.y - nextPosition.y
-    const direction = getDirection(deltaX, deltaY)
-    return {...gangster, position: nextPosition, direction}
-  })
-}
 
-function movePlayer (player, deltaX, deltaY) {
-  const newPosition = {
-    x: player.position.x + deltaX,
-    y: player.position.y + deltaY
+    const nextTile = world[newPosition.y][newPosition.x]
+    if (nextTile.type === 'street') {
+      return {
+        ...state,
+        player: movePlayer(newPosition),
+        gangsters: moveGangsters()
+      }
+    }
+    if (nextTile.type === 'building') {
+      return buildingCollision(newPosition)
+    }
+    return state
   }
-  const nextTile = world[newPosition.y][newPosition.x]
-  if (nextTile.type === 'street') {
+
+  function moveGangsters () {
+    return gangsters.map(gangster => {
+      const path = finder.findPath(
+        gangster.position.x,
+        gangster.position.y,
+        player.position.x,
+        player.position.y,
+        pfGrid.clone()
+      )
+      if (path.length < 2) return gangster
+      const nextPosition = {
+        x: path[1][0],
+        y: path[1][1]
+      }
+      const deltaX = gangster.position.x - nextPosition.x
+      const deltaY = gangster.position.y - nextPosition.y
+      const direction = getDirection(deltaX, deltaY)
+      return {...gangster, position: nextPosition, direction}
+    })
+  }
+
+  function movePlayer (newPosition) {
+    const oldPosition = player.position
+    const deltaX = newPosition.x - oldPosition.x
+    const deltaY = newPosition.y - oldPosition.y
     const direction = getDirection(deltaX, deltaY)
     return {...player, position: newPosition, direction}
   }
-  return player
+
+  function buildingCollision (newPosition) {
+    const shop = shops.find(shop => isSamePosition(shop.position, newPosition))
+    if (shop) {
+      return pickupMoney(shop.id)
+    }
+    const bank = banks.find(bank => isSamePosition(bank.position, newPosition))
+    if (bank) {
+      return dropoffMoney(bank.id)
+    }
+    return state
+  }
+
+  function pickupMoney (shopId) {
+    const pickupShop = shops.find(shop => shop.id === shopId)
+    const newShops = shops.map(shop => {
+      if (shop.id !== action.payload.id) return shop
+      return {...shop, money: 0}
+    })
+    return {
+      ...state,
+      shops: newShops,
+      money: {...money, current: money.current + pickupShop.money}
+    }
+  }
+
+  function dropoffMoney (bankId) {
+    return {
+      ...state,
+      money: {
+        ...money,
+        current: 0,
+        delivered: money.delivered + money.current
+      }
+    }
+  }
 }
 
 function getDirection (deltaX, deltaY) {
@@ -224,7 +267,7 @@ function render() {
   renderWorld(world)
   renderGangsters(state.gangsters)
   renderPlayer(state.player)
-  renderStores(state.stores)
+  renderShops(state.shops)
   renderBanks(state.banks)
   renderMoney(state.money)
 
@@ -251,11 +294,11 @@ function render() {
     })
   }
 
-  function renderStores (stores) {
-    stores.forEach(store => {
+  function renderShops (shops) {
+    shops.forEach(shop => {
       ctx.beginPath()
       ctx.fillStyle='rgb(90, 95, 200)'
-      ctx.rect(store.position.x * TILE_SIZE, store.position.y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+      ctx.rect(shop.position.x * TILE_SIZE, shop.position.y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
       ctx.fill()
     })
   }
@@ -301,4 +344,8 @@ function worldShorthandToType(shorthand) {
   return {
     type: 'street'
   }
+}
+
+function isSamePosition (positionA, positionB) {
+  return positionA.x === positionB.x && positionA.y === positionB.y
 }
