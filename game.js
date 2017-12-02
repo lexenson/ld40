@@ -6,11 +6,15 @@ const CANVAS = document.getElementById('canvas')
 let ctx = CANVAS.getContext('2d')
 
 const TILE_SIZE = 16
+const CAR_WIDTH = 8
+const CAR_HEIGHT = 12
+const CAR_OFFSET_X = (TILE_SIZE - CAR_WIDTH) / 2
+const CAR_OFFSET_Y = (TILE_SIZE - CAR_HEIGHT) / 2
 
 const world =
 `
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb      bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb         bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbb bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbb bbb bb                                 bbbbbbb
 bbb bb bbbbbbbb bbbbbbbb  bbbbbbbbbbbbbbb  bbbbbbb
@@ -60,6 +64,7 @@ const finder = new PF.AStarFinder()
 
 const initialState = {
   player: {
+    direction: 'left',
     position: {
       x: 1,
       y: 12
@@ -67,12 +72,14 @@ const initialState = {
   },
   gangsters: [
     {
+      direction: 'left',
       position: {
         x: 13,
         y: 12
       }
     },
     {
+      direction: 'right',
       position: {
         x: 3,
         y: 21
@@ -161,7 +168,10 @@ function moveGangsters (gangsters, player) {
       x: path[1][0],
       y: path[1][1]
     }
-    return {...gangster, position: nextPosition}
+    const deltaX = gangster.position.x - nextPosition.x
+    const deltaY = gangster.position.y - nextPosition.y
+    const direction = getDirection(deltaX, deltaY)
+    return {...gangster, position: nextPosition, direction}
   })
 }
 
@@ -171,8 +181,19 @@ function movePlayer (player, deltaX, deltaY) {
     y: player.position.y + deltaY
   }
   const nextTile = world[newPosition.y][newPosition.x]
-  if (nextTile.type === 'street') return {...player, position: newPosition}
+  if (nextTile.type === 'street') {
+    const direction = getDirection(deltaX, deltaY)
+    return {...player, position: newPosition, direction}
+  }
   return player
+}
+
+function getDirection (deltaX, deltaY) {
+  if (deltaX === 1) return 'right'
+  if (deltaX === -1) return 'left'
+  if (deltaY === 1) return 'up'
+  if (deltaY === -1) return 'down'
+  return 'up'
 }
 
 function render() {
@@ -197,21 +218,30 @@ function render() {
     })
   }
 
-  function renderPlayer(player) {
+  function renderCar (position, direction, color) {
     ctx.beginPath()
-    ctx.rect(player.position.x * TILE_SIZE, player.position.y * TILE_SIZE,
-      TILE_SIZE, TILE_SIZE)
-    ctx.fillStyle='rgb(10, 10, 10)'
+    switch(direction) {
+      case 'up':
+      case 'down':
+        ctx.rect(position.x * TILE_SIZE + CAR_OFFSET_X, position.y * TILE_SIZE + CAR_OFFSET_Y,
+          CAR_WIDTH, CAR_HEIGHT)
+        break
+      case 'left':
+      case 'right':
+        ctx.rect(position.x * TILE_SIZE + CAR_OFFSET_Y, position.y * TILE_SIZE + CAR_OFFSET_X,
+          CAR_HEIGHT, CAR_WIDTH)
+    }
+    ctx.fillStyle=color
     ctx.fill()
+  }
+
+  function renderPlayer(player) {
+    renderCar(player.position, player.direction, 'rgb(10, 10, 10)')
   }
 
   function renderGangsters(gangsters) {
     gangsters.forEach(gangster => {
-      ctx.beginPath()
-      ctx.rect(gangster.position.x * TILE_SIZE, gangster.position.y * TILE_SIZE,
-        TILE_SIZE, TILE_SIZE)
-      ctx.fillStyle='rgb(100, 10, 10)'
-      ctx.fill()
+      renderCar(gangster.position, gangster.direction, 'rgb(100, 10, 10)')
     })
   }
 }
