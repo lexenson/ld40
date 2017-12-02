@@ -9,25 +9,46 @@ const TILE_SIZE = 16
 
 const world =
   `
-bbb bbbbbb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
- bb     bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
- bb bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
- bb bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb bbbbbb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+ bb     bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+ bb bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+ bb bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b   bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb bbbbbb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+ bb     bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+ bb bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+ bb bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 
-bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b   bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb bbbbbb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
- bb     bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
- bb bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
- bb bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b   bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb bbbbbb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+ bb     bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+ bb bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+ bb bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 
-bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b   bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b   bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb bbbbbb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+ bb     bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+ bb bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+ bb bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 
+bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b   bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b   bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 `
   .trim()
   .split('\n')
@@ -118,8 +139,9 @@ function render() {
       line.forEach((tile, x) => {
         if (tile.type === 'building') {
           ctx.beginPath()
+          ctx.fillStyle='rgb(168, 95, 53)'
           ctx.rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-          ctx.stroke()
+          ctx.fill()
         }
       })
     })
@@ -129,7 +151,8 @@ function render() {
     ctx.beginPath()
     ctx.rect(player.position.x * TILE_SIZE, player.position.y * TILE_SIZE,
       TILE_SIZE, TILE_SIZE)
-    ctx.stroke()
+    ctx.fillStyle='rgb(10, 10, 10)'
+    ctx.fill()
   }
 }
 

@@ -3,10 +3,30 @@
   <head>
     <meta charset="utf-8">
     <title>Money transporter</title>
+    <style>
+    .outer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%
+    }
+    .inner {
+      width: 800px;
+      height: 640px;
+    }
+    html, body {
+      height: 100%;
+      overflow-y: hidden;
+    }
+    </style>
     <script src="https://unpkg.com/redux@latest/dist/redux.min.js"></script>
   </head>
   <body>
-    <canvas id="canvas" width="800" height="640"></canvas>
+    <div class="outer">
+      <div class="inner">
+        <canvas id="canvas" width="800" height="640"></canvas>
+      </div>
+    </div>
     <script type="text/javascript" src="game.js"></script>
   </body>
 </html>
