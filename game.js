@@ -63,6 +63,26 @@ const pfGrid = new PF.Grid(
 const finder = new PF.AStarFinder()
 
 const initialState = {
+  money: {
+    current: 0,
+    delivered: 0
+  },
+  stores: [
+    {
+      position: {
+        x: 3,
+        y: 0
+      }
+    }
+  ],
+  banks: [
+    {
+      position: {
+        x: 7,
+        y: 0
+      }
+    }
+  ],
   player: {
     direction: 'left',
     position: {
@@ -202,13 +222,16 @@ function render() {
   ctx.clearRect(0, 0, CANVAS.width, CANVAS.height)
 
   renderWorld(world)
-  renderPlayer(state.player)
   renderGangsters(state.gangsters)
+  renderPlayer(state.player)
+  renderStores(state.stores)
+  renderBanks(state.banks)
+  renderMoney(state.money)
 
   function renderWorld(world) {
     world.forEach((line, y) => {
       line.forEach((tile, x) => {
-        if (tile.type === 'building') {
+        if (tile.type !== 'street') {
           ctx.beginPath()
           ctx.fillStyle='rgb(168, 95, 53)'
           ctx.rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
@@ -216,6 +239,43 @@ function render() {
         }
       })
     })
+  }
+
+  function renderPlayer(player) {
+    renderCar(player.position, player.direction, 'rgb(10, 10, 10)')
+  }
+
+  function renderGangsters(gangsters) {
+    gangsters.forEach(gangster => {
+      renderCar(gangster.position, gangster.direction, 'rgb(100, 10, 10)')
+    })
+  }
+
+  function renderStores (stores) {
+    stores.forEach(store => {
+      ctx.beginPath()
+      ctx.fillStyle='rgb(90, 95, 200)'
+      ctx.rect(store.position.x * TILE_SIZE, store.position.y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+      ctx.fill()
+    })
+  }
+
+  function renderBanks (banks) {
+    banks.forEach(bank => {
+      ctx.beginPath()
+      ctx.fillStyle='rgb(20, 190, 20)'
+      ctx.rect(bank.position.x * TILE_SIZE, bank.position.y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+      ctx.fill()
+    })
+  }
+
+
+
+  function renderMoney (money) {
+    ctx.font = '20px Courier'
+    ctx.fillStyle='black'
+    ctx.fillText(`current:   $${money.current}`,620,20);
+    ctx.fillText(`delivered: $${money.delivered}`,620,40);
   }
 
   function renderCar (position, direction, color) {
@@ -234,22 +294,10 @@ function render() {
     ctx.fillStyle=color
     ctx.fill()
   }
-
-  function renderPlayer(player) {
-    renderCar(player.position, player.direction, 'rgb(10, 10, 10)')
-  }
-
-  function renderGangsters(gangsters) {
-    gangsters.forEach(gangster => {
-      renderCar(gangster.position, gangster.direction, 'rgb(100, 10, 10)')
-    })
-  }
 }
 
 function worldShorthandToType(shorthand) {
-  if (shorthand === 'b') return {
-    type: 'building'
-  }
+  if (shorthand === 'b') return { type: 'building' }
   return {
     type: 'street'
   }
