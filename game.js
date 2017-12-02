@@ -53,20 +53,35 @@ bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb`
   .split('\n')
   .map(line => line.split('').map(worldShorthandToType))
 
+const pfGrid = new PF.Grid(
+  world.map(line => line.map(tile => tile.type !== 'street' ? 1 : 0))
+)
+const finder = new PF.AStarFinder()
+
 const initialState = {
   player: {
     position: {
       x: 1,
       y: 12
     }
-  }
+  },
+  gangsters: [
+    {
+      position: {
+        x: 13,
+        y: 12
+      }
+    },
+    {
+      position: {
+        x: 3,
+        y: 21
+      }
+    }
+  ]
 }
 
-let store = createStore(
-  combineReducers({
-    player
-  })
-)
+let store = createStore(reducer)
 
 render()
 store.subscribe(render)
@@ -112,19 +127,52 @@ function handleInput(store) {
   })
 }
 
-function player(player = initialState.player, action) {
+function reducer(state = initialState, action) {
+  const {player, gangsters} = state
   switch (action.type) {
     case 'MOVE_PLAYER':
-      const newPosition = {
-        x: player.position.x + action.payload.deltaX,
-        y: player.position.y + action.payload.deltaY
+      const newGangsters = moveGangsters(gangsters, player)
+      const newPlayer = movePlayer(
+        player,
+        action.payload.deltaX,
+        action.payload.deltaY
+      )
+
+      return {...state,
+        player: newPlayer,
+        gangsters: newGangsters
       }
-      const nextTile = world[newPosition.y][newPosition.x]
-      if (nextTile.type === 'street') return {...player, position: newPosition}
-      return player
     default:
-      return player
+      return state
   }
+}
+
+function moveGangsters (gangsters, player) {
+  return gangsters.map(gangster => {
+    const path = finder.findPath(
+      gangster.position.x,
+      gangster.position.y,
+      player.position.x,
+      player.position.y,
+      pfGrid.clone()
+    )
+    if (path.length < 2) return gangster
+    const nextPosition = {
+      x: path[1][0],
+      y: path[1][1]
+    }
+    return {...gangster, position: nextPosition}
+  })
+}
+
+function movePlayer (player, deltaX, deltaY) {
+  const newPosition = {
+    x: player.position.x + deltaX,
+    y: player.position.y + deltaY
+  }
+  const nextTile = world[newPosition.y][newPosition.x]
+  if (nextTile.type === 'street') return {...player, position: newPosition}
+  return player
 }
 
 function render() {
@@ -134,6 +182,7 @@ function render() {
 
   renderWorld(world)
   renderPlayer(state.player)
+  renderGangsters(state.gangsters)
 
   function renderWorld(world) {
     world.forEach((line, y) => {
@@ -154,6 +203,16 @@ function render() {
       TILE_SIZE, TILE_SIZE)
     ctx.fillStyle='rgb(10, 10, 10)'
     ctx.fill()
+  }
+
+  function renderGangsters(gangsters) {
+    gangsters.forEach(gangster => {
+      ctx.beginPath()
+      ctx.rect(gangster.position.x * TILE_SIZE, gangster.position.y * TILE_SIZE,
+        TILE_SIZE, TILE_SIZE)
+      ctx.fillStyle='rgb(100, 10, 10)'
+      ctx.fill()
+    })
   }
 }
 
