@@ -6,10 +6,20 @@ const CAR_LENGTH = 12
 const CAR_WIDTH = 8
 const PLAYER_SPEED = 2
 
+const size = {
+  width: 50,
+  height: 40
+}
+const blockSize = {
+  width: 5,
+  height: 4
+}
+
 
 const images = {
   transporter: getImage('money_transporter'),
-  gangster: getImage('gangster_car')
+  gangster: getImage('gangster_car'),
+  block: getImage('block')
 }
 
 const world = createWorld()
@@ -34,8 +44,8 @@ const initialState = {
       id: 0,
       money: 100,
       position: {
-        x: 3,
-        y: 0
+        x: 30,
+        y: 30
       }
     }
   ],
@@ -43,8 +53,8 @@ const initialState = {
     {
       id: 0,
       position: {
-        x: 7,
-        y: 0
+        x: 10,
+        y: 10
       }
     }
   ],
@@ -75,13 +85,7 @@ const initialState = {
 }
 
 var state
-
 startGame()
-
-function startGame () {
-  state = JSON.parse(JSON.stringify(initialState))
-}
-
 
 handleInput()
 gameLoop()
@@ -217,6 +221,16 @@ function render() {
   renderShops(state.shops)
   renderBanks(state.banks)
 
+  for (let y = 0; y < size.height; y++) {
+    const row = []
+    world.push(row)
+    for (let x = 0; x < size.width; x++) {
+      if((x + 1) % (blockSize.width + 1) == 0 && (y + 1) % (blockSize.height + 1) == 0) {
+        ctx.drawImage(images.block, x * TILE_SIZE + 16, y * TILE_SIZE + 16)
+      }
+    }
+  }
+
   if (!state.started) {
     renderStartScreen()
     return
@@ -304,14 +318,6 @@ function getImage (src) {
 }
 
 function createWorld () {
-  const size = {
-    width: 50,
-    height: 40
-  }
-  const blockSize = {
-    width: 5,
-    height: 4
-  }
   const world = []
   for (let y = 0; y < size.height; y++) {
     const row = []
@@ -325,4 +331,8 @@ function createWorld () {
     }
   }
   return world
+}
+
+function startGame () {
+  state = JSON.parse(JSON.stringify(initialState))
 }
