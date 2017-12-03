@@ -12,51 +12,7 @@ const images = {
   gangster: getImage('gangster_car')
 }
 
-const world =
-`
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb         bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb bbb bb                                 bbbbbbb
-bbb bb bbbbbbbb bbbbbbbb  bbbbbbbbbbbbbbb  bbbbbbb
-bbb bb bbbbbbbb bbbbbbbb  bbbbbbbbbbbbbbbb bbbbbbb
-b   bbbbbbbbbbb bbbbbbbb  bbbbbbbbbbbbbbbb bbbbbbb
-bbb bbbbbbbbbbb bbbbbbbb  bbbbbbbbbbbbbbbb bbbbbbb
-bbb bbbbbb bbbb bbbbbbbb  bbbbbbbbbbbbbbbb bbbbbbb
-bbb     bb bbbb bbbbbbbb  bbbbbbbbbbbbbbbb bbbbbbb
-bbb bbb bb bbbb bbbb         bbbbbbbbbbbbb bbbbbbb
-bbb bbb bb bbbb bbbb  bbbbbb bbbbbbbbbbbbb bbbbbbb
-b                                                b
-bbb bb bbbbbbbbbbbb bbbbbbbbb bbbbb bbbbb bbbbbbbb
-bbb bb bbbbbbbbbbbb bbbbbbbbb bbbbb bbbbb bbbbbbbb
-b   bbbbbbbbbbbbbbb bbbbbbbbb bbbbb bbbbb bbbbbbbb
-bbb bbbbbbbbbbbbbbb bbbbbbbbb bbbbbbbbbbb bbbbbbbb
-bbb bbbbbb bbbbbbbb                            bbb
-bb     bb bbbbbbbbb bbbbbbbbb bbbbbbbbbbb bbbbbbbb
-bb bbb bb bbbbbbbbb bbbbbbbbb bbbbbbbbbbb bbbbbbbb
-bb bbb bb bbbbbbbbb bbbbbbbbb bbbbbbbbbbb bbbbbbbb
-b                                                b
-bbb bb bbbbb  bbbbbbbbbbbbbbbb bbbbbbbbbbbbbbbbbbb
-bbb bb bbbbbb   bbbbbbbbbbbbbb bbbbbbbbbbbbbbbbbbb
-b   bbbbbbbbbbb  bbbbbbbbbbbbb bbbbbbbbbbbbbbbbbbb
-bbb bbbbbbbbbbb                                  b
-bbb bbbbbb bbbbbbbbbb bbbbbbbb bbbbbbbbb bbbb bbbb
-bbb     bb bbbbbbbbbb bbbbbbbb bbbbbbbbb bbbbbbbbb
-bbb bbb bb bbbbbbbbbb bbbbbbbb bbbbbbbbb         b
-bbb bbb bb bbbbbbbbbb bbbbbbbb bbbbbbbbbbbbbbbbb b
-b                                                b
-bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbb bbbbbbbbbbbbbb
-bbb bb bbbbbbbbbbbbbbbbbbbbbbbbbbbb bbbbbbbbbbbbbb
-b   bbbbbbbbbbb              bbbbbb bbbbbbbbbbbbbb
-bbb bbbbbbbbbbb bbb  bbbbbbb bbbbbb bbbbbbbbbbbbbb
-bbb bb bbbbbbbb bbb  bbbbbbb bbbbbb bbbbbbbbbbbbbb
-bbb bb bbbbbbbb bbb          bbbbbb bbbbbbbbbbbbbb
-b   bbbbbbbbbbb bbbbbbbbbbbbbbbbbbb bbbbbbbbbbbbbb
-bbb                                 bbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb`
-  .trim()
-  .split('\n')
-  .map(line => line.split('').map(worldShorthandToType))
+const world = createWorld()
 
 const pfGrid = new PF.Grid(
   world.map(line => line.map(tile => tile.type !== 'street' ? 1 : 0))
@@ -98,7 +54,7 @@ const state = {
     },
     speed: PLAYER_SPEED,
     position: {
-      x: 32,
+      x: 5 * 16,
       y: 16
     }
   },
@@ -110,8 +66,8 @@ const state = {
       },
       speed: 1,
       position: {
-        x: 208,
-        y: 192
+        x: 10 * 16,
+        y: 16
       }
     }
   ]
@@ -251,12 +207,10 @@ function render() {
   function renderWorld(world) {
     world.forEach((line, y) => {
       line.forEach((tile, x) => {
-        if (tile.type !== 'street') {
-          ctx.beginPath()
-          ctx.fillStyle='rgb(168, 95, 53)'
-          ctx.rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-          ctx.fill()
-        }
+        ctx.beginPath()
+        ctx.fillStyle= tile.type === 'building' ? 'rgb(168, 95, 53)' : 'rgb(200,200,200)'
+        ctx.rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+        ctx.fill()
       })
     })
   }
@@ -305,35 +259,13 @@ function render() {
     }
     ctx.save()
     ctx.beginPath()
-    // rotate
     ctx.translate(center.x, center.y)
     if (direction.y === -1) ctx.rotate(1 * Math.PI)
     if (direction.x === -1) ctx.rotate(1/2 * Math.PI)
     if (direction.x === 1) ctx.rotate(3/2 * Math.PI)
 
     ctx.drawImage(image, -TILE_SIZE / 2, -TILE_SIZE / 2)
-
-    // ctx.rect, position.y + 2 - center.y, CAR_WIDTH, CAR_LENGTH)
-    // ctx.fillStyle=color
-    // ctx.fill()
-    // ctx.beginPath()
-    // ctx.rect(position.x + 4 - center.x, position.y + 2 - center.y, CAR_WIDTH, 2)
-    // ctx.fillStyle='red'
-    // ctx.fill()
     ctx.restore()
-
-    // if( direction.y !== 0) {
-    //   ctx.rect(position.x + 4, position.y + 2, CAR_WIDTH, CAR_LENGTH)
-    // } else {
-    //   ctx.rect(position.x + 2, position.y + 4, CAR_LENGTH, CAR_WIDTH)
-    // }
-  }
-}
-
-function worldShorthandToType(shorthand) {
-  if (shorthand === 'b') return { type: 'building' }
-  return {
-    type: 'street'
   }
 }
 
@@ -341,4 +273,28 @@ function getImage (src) {
   const image = new Image()
   image.src = src + '.png'
   return image
+}
+
+function createWorld () {
+  const size = {
+    width: 50,
+    height: 40
+  }
+  const blockSize = {
+    width: 5,
+    height: 4
+  }
+  const world = []
+  for (let y = 0; y < size.height; y++) {
+    const row = []
+    world.push(row)
+    for (let x = 0; x < size.width; x++) {
+      if(x !== 0 && y!== 0 && x !== size.width - 1 && y !== size.height - 1 &&( (x + 1) % (blockSize.width + 1) == 0 || (y + 1) % (blockSize.height + 1) == 0)) {
+        row.push({type: 'street'})
+      } else {
+        row.push({type: 'building'})
+      }
+    }
+  }
+  return world
 }
