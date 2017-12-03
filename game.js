@@ -92,7 +92,7 @@ const state = {
       x: 1,
       y: 0
     },
-    speed: 1,
+    speed: PLAYER_SPEED,
     position: {
       x: 32,
       y: 16
@@ -169,29 +169,32 @@ function update() {
 }
 
 function updatePlayer() {
-  if(state.requestedDirection.x !== 0 && state.player.position.y % 16 === 0) {
-    newPositionX = state.player.position.x + state.player.speed * state.requestedDirection.x
-    const newPositionWorldX = Math.floor((newPositionX + Math.max(state.requestedDirection.x, 0) * 15) / TILE_SIZE)
-    const oldPositionWorldY = Math.floor((state.player.position.y) / TILE_SIZE)
-    
-    const nextTileX = world[oldPositionWorldY][newPositionWorldX]
-    
-    if (nextTileX.type === 'street') {
-      state.player.direction.x = newPositionX - state.player.position.x
-      state.player.position.x = newPositionX
-    }
+  if(state.requestedDirection.x !== 0) {
+    calculateMovement('x')
   }
 
-  if(state.requestedDirection.y !== 0 && state.player.position.x % 16 === 0) {
-    newPositionY = state.player.position.y + state.player.speed * state.requestedDirection.y
-    const newPositionWorldY = Math.floor((newPositionY  + Math.max(state.requestedDirection.y, 0) * 15) / TILE_SIZE)
-    const oldPositionWorldX = Math.floor((state.player.position.x) / TILE_SIZE)
-    
-    const nextTileY = world[newPositionWorldY][oldPositionWorldX]
-    
-    if (nextTileY.type === 'street') {
-      state.player.direction.y = newPositionY - state.player.position.y      
-      state.player.position.y = newPositionY
+  if(state.requestedDirection.y !== 0) {
+    calculateMovement('y')
+  }
+
+  function calculateMovement (axis) {
+    const otherAxis = axis === 'x' ? 'y' : 'x'
+    const newPositionAxis = state.player.position[axis] + state.player.speed * state.requestedDirection[axis]
+    const newPositionWorldAxis = Math.floor((newPositionAxis + Math.max(state.requestedDirection[axis], 0) * 15) / TILE_SIZE)
+    const oldPositionWorldOtherAxis = Math.floor((state.player.position[otherAxis] + Math.max(state.player.direction[otherAxis], 0) * 15)/ TILE_SIZE)
+
+    const nextTile = axis === 'x'
+      ? world[oldPositionWorldOtherAxis][newPositionWorldAxis]
+      : world[newPositionWorldAxis][oldPositionWorldOtherAxis]
+
+    if (nextTile.type === 'street') {
+      if (state.player.position[otherAxis] % 16 === 0) {
+        state.player.direction[axis] = Math.min(1, Math.max(-1, newPositionAxis - state.player.position[axis]))
+        state.player.position[axis] = newPositionAxis
+      } else {
+        state.player.direction[otherAxis] = Math.min(1, Math.max(-1, oldPositionWorldOtherAxis * TILE_SIZE - state.player.position[otherAxis]))
+        state.player.position[otherAxis] += state.player.direction[otherAxis]
+      }
     }
   }
 }
