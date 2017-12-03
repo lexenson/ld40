@@ -71,6 +71,28 @@ const initialState = {
         x: 13 * 16,
         y: 16
       }
+    },
+    {
+      direction: {
+        x: 0,
+        y: 1
+      },
+      speed: 1,
+      position: {
+        x: 30 * 16,
+        y: 9 * 16
+      }
+    },
+    {
+      direction: {
+        x: 0,
+        y: 1
+      },
+      speed: 1,
+      position: {
+        x: 25 * 16,
+        y: 29 * 16
+      }
     }
   ]
 }
