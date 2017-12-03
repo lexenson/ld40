@@ -2,11 +2,15 @@ const CANVAS = document.getElementById('canvas')
 let ctx = CANVAS.getContext('2d')
 
 const TILE_SIZE = 16
-const CAR_WIDTH = 16// 8
-const CAR_HEIGHT = 16// 12
-const CAR_OFFSET_X = (TILE_SIZE - CAR_WIDTH) / 2
-const CAR_OFFSET_Y = (TILE_SIZE - CAR_HEIGHT) / 2
+const CAR_LENGTH = 12
+const CAR_WIDTH = 8
 const PLAYER_SPEED = 2
+
+
+const images = {
+  transporter: getImage('money_transporter'),
+  gangster: getImage('gangster_car')
+}
 
 const world =
 `
@@ -190,9 +194,11 @@ function updatePlayer() {
     if (nextTile.type === 'street') {
       if (state.player.position[otherAxis] % 16 === 0) {
         state.player.direction[axis] = Math.min(1, Math.max(-1, newPositionAxis - state.player.position[axis]))
+        state.player.direction[otherAxis] = 0
         state.player.position[axis] = newPositionAxis
       } else {
         state.player.direction[otherAxis] = Math.min(1, Math.max(-1, oldPositionWorldOtherAxis * TILE_SIZE - state.player.position[otherAxis]))
+        state.player.direction[axis] = 0
         state.player.position[otherAxis] += state.player.direction[otherAxis]
       }
     }
@@ -256,12 +262,12 @@ function render() {
   }
 
   function renderPlayer(player) {
-    renderCar(player.position, player.direction, 'rgb(10, 10, 10)')
+    renderCar(player.position, player.direction, images.transporter)
   }
 
   function renderGangsters(gangsters) {
     gangsters.forEach(gangster => {
-      renderCar(gangster.position, gangster.direction, 'rgb(100, 10, 10)')
+      renderCar(gangster.position, gangster.direction, images.gangster)
     })
   }
 
@@ -292,16 +298,35 @@ function render() {
     ctx.fillText(`delivered: $${money.delivered}`,600,40);
   }
 
-  function renderCar (position, direction, color) {
-    ctx.beginPath()
-    if( direction.y !== 0) {
-      ctx.rect(position.x, position.y, CAR_WIDTH, CAR_HEIGHT)
-    } else {
-      ctx.rect(position.x, position.y, CAR_HEIGHT, CAR_WIDTH)
+  function renderCar (position, direction, image) {
+    const center = {
+      x: position.x + TILE_SIZE / 2,
+      y: position.y + TILE_SIZE / 2
     }
+    ctx.save()
+    ctx.beginPath()
+    // rotate
+    ctx.translate(center.x, center.y)
+    if (direction.y === -1) ctx.rotate(1 * Math.PI)
+    if (direction.x === -1) ctx.rotate(1/2 * Math.PI)
+    if (direction.x === 1) ctx.rotate(3/2 * Math.PI)
 
-    ctx.fillStyle=color
-    ctx.fill()
+    ctx.drawImage(image, -TILE_SIZE / 2, -TILE_SIZE / 2)
+
+    // ctx.rect, position.y + 2 - center.y, CAR_WIDTH, CAR_LENGTH)
+    // ctx.fillStyle=color
+    // ctx.fill()
+    // ctx.beginPath()
+    // ctx.rect(position.x + 4 - center.x, position.y + 2 - center.y, CAR_WIDTH, 2)
+    // ctx.fillStyle='red'
+    // ctx.fill()
+    ctx.restore()
+
+    // if( direction.y !== 0) {
+    //   ctx.rect(position.x + 4, position.y + 2, CAR_WIDTH, CAR_LENGTH)
+    // } else {
+    //   ctx.rect(position.x + 2, position.y + 4, CAR_LENGTH, CAR_WIDTH)
+    // }
   }
 }
 
@@ -310,4 +335,10 @@ function worldShorthandToType(shorthand) {
   return {
     type: 'street'
   }
+}
+
+function getImage (src) {
+  const image = new Image()
+  image.src = src + '.png'
+  return image
 }
