@@ -7,26 +7,35 @@ const CAR_WIDTH = 8
 const PLAYER_SPEED = 2
 
 const size = {
-  width: 50,
-  height: 40
+  width: 48,
+  height: 39
 }
 const blockSize = {
-  width: 5,
+  width: 6,
   height: 4
 }
+const buildingSize = {
+  width: 1,
+  height: 2
+}
+
+// width 32
+// height 64
 
 
 const images = {
   transporter: getImage('money_transporter'),
   gangster: getImage('gangster_car'),
-  block: getImage('block')
+  block: getImage('block'),
+  resedentials: [
+    getImage('building_01'),
+    getImage('building_02'),
+    getImage('building_03')
+  ],
+  bank: getImage('bank'),
+  shop: getImage('shop')
 }
 
-const world = createWorld()
-
-const pfGrid = new PF.Grid(
-  world.map(line => line.map(tile => tile.type !== 'street' ? 1 : 0))
-)
 const finder = new PF.AStarFinder()
 
 const initialState = {
@@ -39,25 +48,6 @@ const initialState = {
     current: 0,
     delivered: 0
   },
-  shops: [
-    {
-      id: 0,
-      money: 100,
-      position: {
-        x: 30,
-        y: 30
-      }
-    }
-  ],
-  banks: [
-    {
-      id: 0,
-      position: {
-        x: 10,
-        y: 10
-      }
-    }
-  ],
   player: {
     direction: {
       x: 0,
@@ -65,7 +55,7 @@ const initialState = {
     },
     speed: PLAYER_SPEED,
     position: {
-      x: 5 * 16,
+      x: 6 * 16,
       y: 16
     }
   },
@@ -77,7 +67,7 @@ const initialState = {
       },
       speed: 1,
       position: {
-        x: 11 * 16,
+        x: 13 * 16,
         y: 16
       }
     }
@@ -154,6 +144,12 @@ function updatePlayer() {
     calculateMovement('y')
   }
 
+  function getTile (x, y) {
+    const row = state.world[x]
+    if (!row) return false
+    return row[y]
+  }
+
   function calculateMovement (axis) {
     const otherAxis = axis === 'x' ? 'y' : 'x'
     const newPositionAxis = state.player.position[axis] + state.player.speed * state.requestedDirection[axis]
@@ -161,10 +157,10 @@ function updatePlayer() {
     const oldPositionWorldOtherAxis = Math.floor((state.player.position[otherAxis] + Math.max(state.player.direction[otherAxis], 0) * 15)/ TILE_SIZE)
 
     const nextTile = axis === 'x'
-      ? world[oldPositionWorldOtherAxis][newPositionWorldAxis]
-      : world[newPositionWorldAxis][oldPositionWorldOtherAxis]
+      ? getTile(oldPositionWorldOtherAxis, newPositionWorldAxis)
+      : getTile(newPositionWorldAxis, oldPositionWorldOtherAxis)
 
-    if (nextTile.type === 'street') {
+    if (nextTile && nextTile.type === 'street') {
       if (state.player.position[otherAxis] % 16 === 0) {
         state.player.direction[axis] = Math.min(1, Math.max(-1, newPositionAxis - state.player.position[axis]))
         state.player.direction[otherAxis] = 0
@@ -186,7 +182,7 @@ function updateGangsters () {
         Math.floor(gangster.position.y / 16),
         Math.floor(state.player.position.x / 16),
         Math.floor(state.player.position.y / 16),
-        pfGrid.clone()
+        state.pfGrid.clone()
       )
       if (path.length > 1) {
         const nextPositionWorld = {
@@ -215,21 +211,10 @@ function updateGangsters () {
 function render() {
   ctx.clearRect(0, 0, CANVAS.width, CANVAS.height)
 
-  renderWorld(world)
+  renderWorld(state.world)
+  renderBuildings(state.buildings)
   renderGangsters(state.gangsters)
   renderPlayer(state.player)
-  renderShops(state.shops)
-  renderBanks(state.banks)
-
-  for (let y = 0; y < size.height; y++) {
-    const row = []
-    world.push(row)
-    for (let x = 0; x < size.width; x++) {
-      if((x + 1) % (blockSize.width + 1) == 0 && (y + 1) % (blockSize.height + 1) == 0) {
-        ctx.drawImage(images.block, x * TILE_SIZE + 16, y * TILE_SIZE + 16)
-      }
-    }
-  }
 
   if (!state.started) {
     renderStartScreen()
@@ -257,6 +242,16 @@ function render() {
     })
   }
 
+  function renderBuildings (buildings) {
+    buildings.forEach((building) => {
+      if (building.type !== 'resedential') {
+        ctx.drawImage(images[building.type], building.position.x, building.position.y)
+      } else {
+        ctx.drawImage(images.resedentials[building.imageId], building.position.x, building.position.y)
+      }
+    })
+  }
+
   function renderPlayer(player) {
     renderCar(player.position, player.direction, images.transporter)
   }
@@ -266,26 +261,6 @@ function render() {
       renderCar(gangster.position, gangster.direction, images.gangster)
     })
   }
-
-  function renderShops (shops) {
-    shops.forEach(shop => {
-      ctx.beginPath()
-      ctx.fillStyle='rgb(90, 95, 200)'
-      ctx.rect(shop.position.x * TILE_SIZE, shop.position.y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-      ctx.fill()
-    })
-  }
-
-  function renderBanks (banks) {
-    banks.forEach(bank => {
-      ctx.beginPath()
-      ctx.fillStyle='rgb(20, 190, 20)'
-      ctx.rect(bank.position.x * TILE_SIZE, bank.position.y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-      ctx.fill()
-    })
-  }
-
-
 
   function renderMoney (money) {
     ctx.font = '20px Courier'
@@ -323,7 +298,7 @@ function createWorld () {
     const row = []
     world.push(row)
     for (let x = 0; x < size.width; x++) {
-      if(x !== 0 && y!== 0 && x !== size.width - 1 && y !== size.height - 1 &&( (x + 1) % (blockSize.width + 1) == 0 || (y + 1) % (blockSize.height + 1) == 0)) {
+      if(( (x + 1) % (blockSize.width + 1) == 0 || (y + 1) % (blockSize.height + 1) == 0)) {
         row.push({type: 'street'})
       } else {
         row.push({type: 'building'})
@@ -333,6 +308,43 @@ function createWorld () {
   return world
 }
 
+function createBuildings () {
+  const buildings = []
+  for (let y = -1; y < size.height; y++) {
+    for (let x = -1; x < size.width; x++) {
+      if((x + 1) % (blockSize.width + 1) == 0 && (y) % (blockSize.height + 1) == 0) {
+        buildings.push(createBuilding({x,y}))
+        buildings.push(createBuilding({x: x + 2, y}))
+        buildings.push(createBuilding({x: x + 4, y}))
+      }
+    }
+  }
+  return buildings
+}
+
+function createBuilding (position) {
+  const random = Math.random()
+  let type = 'resedential'
+  if (random < 0.05) {
+    type = 'bank'
+  } else if (random < 0.10) {
+    type = 'shop'
+  }
+  return {
+    type,
+    position: {
+      x: position.x * TILE_SIZE + 16,
+      y: position.y * TILE_SIZE
+    },
+    imageId: Math.floor(Math.random() * images.resedentials.length)
+  }
+}
+
 function startGame () {
   state = JSON.parse(JSON.stringify(initialState))
+  state.world =  createWorld()
+  state.buildings = createBuildings()
+  state.pfGrid = new PF.Grid(
+    state.world.map(line => line.map(tile => tile.type !== 'street' ? 1 : 0))
+  )
 }
