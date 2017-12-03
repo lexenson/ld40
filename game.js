@@ -60,6 +60,10 @@ const pfGrid = new PF.Grid(
 const finder = new PF.AStarFinder()
 
 const state = {
+  requestedDirection: {
+    x: 0,
+    y: 0
+  },
   money: {
     current: 0,
     delivered: 0
@@ -88,10 +92,10 @@ const state = {
       x: 1,
       y: 0
     },
-    speed: 0,
+    speed: 1,
     position: {
-      x: 16,
-      y: 192
+      x: 32,
+      y: 16
     }
   },
   gangsters: [
@@ -115,35 +119,33 @@ gameLoop()
 
 function handleInput() {
   window.addEventListener('keydown', event => {
-    switch (event.key) {
-      case 'ArrowDown':
-        arrowInput({ deltaX: 0, deltaY: 1})
-        break
-      case 'ArrowUp':
-        arrowInput({ deltaX: 0, deltaY: -1})
-        break
-      case 'ArrowLeft':
-        arrowInput({ deltaX: -1, deltaY: 0})
-        break
-      case 'ArrowRight':
-        arrowInput({ deltaX: 1, deltaY: 0})
+    if (event.key === 'ArrowDown') {
+      state.requestedDirection.y = +1
+    }
+    if (event.key === 'ArrowUp') {
+      state.requestedDirection.y = -1
+    }
+    if (event.key === 'ArrowLeft') {
+      state.requestedDirection.x = -1
+    }
+    if (event.key === 'ArrowRight') {
+      state.requestedDirection.x = +1
     }
   })
   window.addEventListener('keyup', event => {
-    switch (event.key) {
-      case 'ArrowDown':
-      case 'ArrowUp':
-      case 'ArrowLeft':
-      case 'ArrowRight':
-        state.player.speed = 0
+    if (event.key === 'ArrowDown'  && state.requestedDirection.y === +1) {
+      state.requestedDirection.y = 0
+    }
+    if (event.key === 'ArrowUp'  && state.requestedDirection.y === -1) {
+      state.requestedDirection.y = 0
+    }
+    if (event.key === 'ArrowLeft'  && state.requestedDirection.x === -1) {
+      state.requestedDirection.x = 0
+    }
+    if (event.key === 'ArrowRight'  && state.requestedDirection.x === +1) {
+      state.requestedDirection.x = 0
     }
   })
-
-
-  function arrowInput ({ deltaX, deltaY}) {
-    state.player.speed = PLAYER_SPEED
-    state.player.direction = { x: deltaX, y: deltaY}
-  }
 }
 
 function gameLoop() {
@@ -167,43 +169,36 @@ function update() {
 }
 
 function updatePlayer() {
-  const newPosition = {
-    x: state.player.position.x + state.player.speed * state.player.direction.x,
-    y: state.player.position.y + state.player.speed * state.player.direction.y
+  if(state.requestedDirection.x !== 0 && state.player.position.y % 16 === 0) {
+    newPositionX = state.player.position.x + state.player.speed * state.requestedDirection.x
+    const newPositionWorldX = Math.floor((newPositionX + Math.max(state.requestedDirection.x, 0) * 15) / TILE_SIZE)
+    const oldPositionWorldY = Math.floor((state.player.position.y) / TILE_SIZE)
+    
+    const nextTileX = world[oldPositionWorldY][newPositionWorldX]
+    
+    if (nextTileX.type === 'street') {
+      state.player.direction.x = newPositionX - state.player.position.x
+      state.player.position.x = newPositionX
+    }
   }
 
-  // if you want to move y, the x position needs to be on perfect grid
-  // if (state.player.direction.x === 0) {
-  //   if (newPosition.x % TILE_SIZE !== 0) return
-  // }
-  // if (state.player.direction.y === 0) {
-  //   if (newPosition.y % TILE_SIZE !== 0) return
-  // }
-
-  if (state.player.direction.x === 0) {
-    newPosition.x = Math.round(newPosition.x / 16) * 16
-  }
-  if (state.player.direction.y === 0) {
-    newPosition.y = Math.round(newPosition.y / 16) * 16
-  }
-
-  const worldPositionY = state.player.direction.y === 1
-   ? Math.ceil(newPosition.y / TILE_SIZE)
-   : Math.floor(newPosition.y / TILE_SIZE)
-
-  const worldPositionX = state.player.direction.x === 1
-    ? Math.ceil(newPosition.x / TILE_SIZE)
-    : Math.floor(newPosition.x / TILE_SIZE)
-
-  const nextTile = world[worldPositionY][worldPositionX]
-  if (nextTile.type === 'street') {
-    state.player.position = newPosition
+  if(state.requestedDirection.y !== 0 && state.player.position.x % 16 === 0) {
+    newPositionY = state.player.position.y + state.player.speed * state.requestedDirection.y
+    const newPositionWorldY = Math.floor((newPositionY  + Math.max(state.requestedDirection.y, 0) * 15) / TILE_SIZE)
+    const oldPositionWorldX = Math.floor((state.player.position.x) / TILE_SIZE)
+    
+    const nextTileY = world[newPositionWorldY][oldPositionWorldX]
+    
+    if (nextTileY.type === 'street') {
+      state.player.direction.y = newPositionY - state.player.position.y      
+      state.player.position.y = newPositionY
+    }
   }
 }
 
 function updateGangsters () {
   state.gangsters.forEach(gangster => {
-    if (!gangster.goal || (Math.floor(gangster.position.x / 16) === gangster.goal.x && Math.floor(gangster.position.y / 16) === gangster.goal.y)) {
+    if (!gangster.goal || gangster.position.x / 16 === gangster.goal.x && gangster.position.y / 16 === gangster.goal.y) {
       const path = finder.findPath(
         Math.floor(gangster.position.x / 16),
         Math.floor(gangster.position.y / 16),
@@ -212,24 +207,24 @@ function updateGangsters () {
         pfGrid.clone()
       )
       if (path.length > 1) {
-        const nextPosition = {
+        const nextPositionWorld = {
           x: path[1][0],
           y: path[1][1]
         }
-        gangster.goal = nextPosition
-        gangster.direction = {
-          x: nextPosition.x - Math.floor(gangster.position.x / 16),
-          y: nextPosition.y - Math.floor(gangster.position.y / 16)
-        }
-      }
-      else {
-        gangster.goal = undefined
+        gangster.goal = nextPositionWorld
+
       }
     }
-      gangster.position = {
-        x: gangster.position.x + gangster.direction.x * gangster.speed,
-        y: gangster.position.y + gangster.direction.y * gangster.speed,
-      }
+
+    gangster.direction = {
+      x: Math.max(-1, Math.min(1, gangster.goal.x * 16 - gangster.position.x)),
+      y: Math.max(-1, Math.min(1, gangster.goal.y * 16 - gangster.position.y))
+    }
+
+    gangster.position = {
+      x: gangster.position.x + gangster.direction.x * gangster.speed,
+      y: gangster.position.y + gangster.direction.y * gangster.speed,
+    }
     }
   )
 }
@@ -297,9 +292,9 @@ function render() {
   function renderCar (position, direction, color) {
     ctx.beginPath()
     if( direction.y !== 0) {
-      ctx.rect(position.x  + CAR_OFFSET_X, position.y + CAR_OFFSET_Y, CAR_WIDTH, CAR_HEIGHT)
+      ctx.rect(position.x, position.y, CAR_WIDTH, CAR_HEIGHT)
     } else {
-      ctx.rect(position.x + CAR_OFFSET_Y, position.y + CAR_OFFSET_X, CAR_HEIGHT, CAR_WIDTH)
+      ctx.rect(position.x, position.y, CAR_HEIGHT, CAR_WIDTH)
     }
 
     ctx.fillStyle=color
