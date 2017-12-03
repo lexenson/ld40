@@ -2,10 +2,11 @@ const CANVAS = document.getElementById('canvas')
 let ctx = CANVAS.getContext('2d')
 
 const TILE_SIZE = 16
-const CAR_WIDTH = 8
-const CAR_HEIGHT = 12
+const CAR_WIDTH = 16// 8
+const CAR_HEIGHT = 16// 12
 const CAR_OFFSET_X = (TILE_SIZE - CAR_WIDTH) / 2
 const CAR_OFFSET_Y = (TILE_SIZE - CAR_HEIGHT) / 2
+const PLAYER_SPEED = 2
 
 const world =
 `
@@ -87,7 +88,7 @@ const state = {
       x: 1,
       y: 0
     },
-    speed: 2,
+    speed: 0,
     position: {
       x: 16,
       y: 192
@@ -119,28 +120,28 @@ function handleInput() {
         arrowInput({ deltaX: 0, deltaY: 1})
         break
       case 'ArrowUp':
-        arrowInput({ deltaX: 0, deltaY: -1})      
+        arrowInput({ deltaX: 0, deltaY: -1})
         break
       case 'ArrowLeft':
         arrowInput({ deltaX: -1, deltaY: 0})
         break
       case 'ArrowRight':
-        arrowInput({ deltaX: 1, deltaY: 0})      
+        arrowInput({ deltaX: 1, deltaY: 0})
     }
   })
   window.addEventListener('keyup', event => {
     switch (event.key) {
       case 'ArrowDown':
-      case 'ArrowUp':  
+      case 'ArrowUp':
       case 'ArrowLeft':
       case 'ArrowRight':
-        state.player.speed = 0  
+        state.player.speed = 0
     }
   })
 
-  
+
   function arrowInput ({ deltaX, deltaY}) {
-    state.player.speed = 2
+    state.player.speed = PLAYER_SPEED
     state.player.direction = { x: deltaX, y: deltaY}
   }
 }
@@ -171,15 +172,31 @@ function updatePlayer() {
     y: state.player.position.y + state.player.speed * state.player.direction.y
   }
 
-  const nextTile = world[Math.floor(newPosition.y / 16)][Math.floor(newPosition.x / 16)]
-  if (nextTile.type === 'street') {
-    movePlayer(newPosition)
+  // if you want to move y, the x position needs to be on perfect grid
+  // if (state.player.direction.x === 0) {
+  //   if (newPosition.x % TILE_SIZE !== 0) return
+  // }
+  // if (state.player.direction.y === 0) {
+  //   if (newPosition.y % TILE_SIZE !== 0) return
+  // }
+
+  if (state.player.direction.x === 0) {
+    newPosition.x = Math.round(newPosition.x / 16) * 16
+  }
+  if (state.player.direction.y === 0) {
+    newPosition.y = Math.round(newPosition.y / 16) * 16
   }
 
-  function movePlayer (newPosition) {
-    const oldPosition = state.player.position
-    const deltaX = newPosition.x - oldPosition.x
-    const deltaY = newPosition.y - oldPosition.y
+  const worldPositionY = state.player.direction.y === 1
+   ? Math.ceil(newPosition.y / TILE_SIZE)
+   : Math.floor(newPosition.y / TILE_SIZE)
+
+  const worldPositionX = state.player.direction.x === 1
+    ? Math.ceil(newPosition.x / TILE_SIZE)
+    : Math.floor(newPosition.x / TILE_SIZE)
+
+  const nextTile = world[worldPositionY][worldPositionX]
+  if (nextTile.type === 'street') {
     state.player.position = newPosition
   }
 }
@@ -194,14 +211,13 @@ function updateGangsters () {
         Math.floor(state.player.position.y / 16),
         pfGrid.clone()
       )
-      console.log(path)
       if (path.length > 1) {
         const nextPosition = {
           x: path[1][0],
           y: path[1][1]
         }
         gangster.goal = nextPosition
-        gangster.direction = { 
+        gangster.direction = {
           x: nextPosition.x - Math.floor(gangster.position.x / 16),
           y: nextPosition.y - Math.floor(gangster.position.y / 16)
         }
@@ -210,9 +226,9 @@ function updateGangsters () {
         gangster.goal = undefined
       }
     }
-      gangster.position = { 
-        x: gangster.position.x + gangster.direction.x * gangster.speed, 
-        y: gangster.position.y + gangster.direction.y * gangster.speed, 
+      gangster.position = {
+        x: gangster.position.x + gangster.direction.x * gangster.speed,
+        y: gangster.position.y + gangster.direction.y * gangster.speed,
       }
     }
   )
