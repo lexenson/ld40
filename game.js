@@ -19,10 +19,6 @@ const buildingSize = {
   height: 2
 }
 
-// width 32
-// height 64
-
-
 const images = {
   transporter: getImage('money_transporter'),
   gangster: getImage('gangster_car'),
@@ -33,7 +29,12 @@ const images = {
     getImage('building_03')
   ],
   bank: getImage('bank'),
-  shop: getImage('shop')
+  shop: getImage('shop'),
+  streets: {
+    vertical: getImage('street_vertical'),
+    horizontal: getImage('street_horizontal'),
+    crossing: getImage('street_crossing'),
+  }
 }
 
 const finder = new PF.AStarFinder()
@@ -234,10 +235,12 @@ function render() {
   function renderWorld(world) {
     world.forEach((line, y) => {
       line.forEach((tile, x) => {
-        ctx.beginPath()
-        ctx.fillStyle= tile.type === 'building' ? 'rgb(168, 95, 53)' : 'rgb(200,200,200)'
-        ctx.rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-        ctx.fill()
+        if (tile.type === 'street') {
+          let imageType = 'crossing'
+          if (!tile.horizontal) imageType = 'vertical'
+          if (!tile.vertical) imageType = 'horizontal'
+          ctx.drawImage(images.streets[imageType], x * TILE_SIZE, y * TILE_SIZE)
+        }
       })
     })
   }
@@ -298,11 +301,16 @@ function createWorld () {
     const row = []
     world.push(row)
     for (let x = 0; x < size.width; x++) {
-      if(( (x + 1) % (blockSize.width + 1) == 0 || (y + 1) % (blockSize.height + 1) == 0)) {
-        row.push({type: 'street'})
-      } else {
-        row.push({type: 'building'})
+      let tile =  {type: 'building'}
+      if((x + 1) % (blockSize.width + 1) == 0)  {
+        tile.type = 'street'
+        tile.vertical = true
       }
+      if ((y + 1) % (blockSize.height + 1) === 0) {
+        tile.type = 'street'
+        tile.horizontal = true
+      }
+      row.push(tile)
     }
   }
   return world
@@ -325,9 +333,9 @@ function createBuildings () {
 function createBuilding (position) {
   const random = Math.random()
   let type = 'resedential'
-  if (random < 0.05) {
+  if (random < 0.02) {
     type = 'bank'
-  } else if (random < 0.10) {
+  } else if (random < 0.07) {
     type = 'shop'
   }
   return {
