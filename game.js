@@ -8,7 +8,7 @@ const PLAYER_SPEED = 2
 
 const size = {
   width: 48,
-  height: 39
+  height: 40
 }
 const blockSize = {
   width: 6,
@@ -154,8 +154,20 @@ function gameLoop() {
 
 function update() {
   if (!state.started) return
+  updateMoney()
   updatePlayer()
   updateGangsters()
+}
+
+function updateMoney() {
+  const currentTile = state.world[Math.floor(state.player.position.y / 16)][Math.floor(state.player.position.x / 16)]
+
+  if (currentTile.dropOffZone && state.money.current > 0) {
+    state.money.current -= 1
+    state.money.delivered += 1
+  }  else if (currentTile.pickUpZone) {
+    state.money.current += 1
+  }
 }
 
 function updatePlayer() {
@@ -168,9 +180,9 @@ function updatePlayer() {
   }
 
   function getTile (x, y) {
-    const row = state.world[x]
+    const row = state.world[y]
     if (!row) return false
-    return row[y]
+    return row[x]
   }
 
   function calculateMovement (axis) {
@@ -180,8 +192,8 @@ function updatePlayer() {
     const oldPositionWorldOtherAxis = Math.floor((state.player.position[otherAxis] + Math.max(state.player.direction[otherAxis], 0) * 15)/ TILE_SIZE)
 
     const nextTile = axis === 'x'
-      ? getTile(oldPositionWorldOtherAxis, newPositionWorldAxis)
-      : getTile(newPositionWorldAxis, oldPositionWorldOtherAxis)
+      ? getTile(newPositionWorldAxis, oldPositionWorldOtherAxis)
+      : getTile(oldPositionWorldOtherAxis, newPositionWorldAxis)
 
     if (nextTile && nextTile.type === 'street') {
       if (state.player.position[otherAxis] % 16 === 0) {
@@ -248,7 +260,7 @@ function render() {
 
   function renderStartScreen () {
     ctx.font = '40px Courier'
-    ctx.fillStyle='black'
+    ctx.fillStyle='white'
     ctx.fillText(`Money Transporter`,180,250)
     ctx.font = '25px Courier'
     ctx.fillText(`press space to continue`,180,300)
@@ -262,6 +274,17 @@ function render() {
           if (!tile.horizontal) imageType = 'vertical'
           if (!tile.vertical) imageType = 'horizontal'
           ctx.drawImage(images.streets[imageType], x * TILE_SIZE, y * TILE_SIZE)
+          if (tile.dropOffZone) {
+            ctx.globalAlpha = 0.2
+            ctx.fillStyle = 'green'
+            ctx.fillRect(x * TILE_SIZE, y* TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            ctx.globalAlpha = 1.0
+          } else if (tile.pickUpZone) {
+            ctx.globalAlpha = 0.2
+            ctx.fillStyle = 'blue'
+            ctx.fillRect(x * TILE_SIZE, y* TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            ctx.globalAlpha = 1.0
+          }
         }
       })
     })
@@ -290,8 +313,8 @@ function render() {
   function renderMoney (money) {
     ctx.font = '20px Courier'
     ctx.fillStyle='black'
-    ctx.fillText(`current:   $${money.current}`,600,20);
-    ctx.fillText(`delivered: $${money.delivered}`,600,40);
+    ctx.fillText(`current:   $${money.current}`,100,660);
+    ctx.fillText(`delivered: $${money.delivered}`,300,660);
   }
 
   function renderCar (position, direction, image) {
@@ -352,7 +375,7 @@ function createBuildings () {
   return buildings
 }
 
-function createBuilding (position) {
+function createBuilding ({x, y}) {
   const random = Math.random()
   let type = 'resedential'
   if (random < 0.02) {
@@ -360,11 +383,23 @@ function createBuilding (position) {
   } else if (random < 0.07) {
     type = 'shop'
   }
+
+  const id = Math.random()
+
+  if (type === 'bank') {
+    state.world[y+4][x+1].dropOffZone = true
+    state.world[y+4][x+2].dropOffZone = true
+  } else if(type === 'shop') {
+    state.world[y+4][x+1].pickUpZone = true
+    state.world[y+4][x+2].pickUpZone = true
+  }
+
   return {
+    id,
     type,
     position: {
-      x: position.x * TILE_SIZE + 16,
-      y: position.y * TILE_SIZE
+      x: x * TILE_SIZE + 16,
+      y: y * TILE_SIZE
     },
     imageId: Math.floor(Math.random() * images.resedentials.length)
   }
