@@ -19,7 +19,8 @@ const pfGrid = new PF.Grid(
 )
 const finder = new PF.AStarFinder()
 
-const state = {
+const initialState = {
+  started: false,
   requestedDirection: {
     x: 0,
     y: 0
@@ -49,8 +50,8 @@ const state = {
   ],
   player: {
     direction: {
-      x: 1,
-      y: 0
+      x: 0,
+      y: 1
     },
     speed: PLAYER_SPEED,
     position: {
@@ -61,16 +62,24 @@ const state = {
   gangsters: [
     {
       direction: {
-        x: 1,
-        y: 0
+        x: 0,
+        y: 1
       },
       speed: 1,
       position: {
-        x: 10 * 16,
+        x: 11 * 16,
         y: 16
       }
     }
   ]
+}
+
+var state
+
+startGame()
+
+function startGame () {
+  state = JSON.parse(JSON.stringify(initialState))
 }
 
 
@@ -93,6 +102,9 @@ function handleInput() {
     }
   })
   window.addEventListener('keyup', event => {
+    if (event.key === ' ') {
+      state.started = true
+    }
     if (event.key === 'ArrowDown'  && state.requestedDirection.y === +1) {
       state.requestedDirection.y = 0
     }
@@ -124,6 +136,7 @@ function gameLoop() {
 }
 
 function update() {
+  if (!state.started) return
   updatePlayer()
   updateGangsters()
 }
@@ -177,7 +190,8 @@ function updateGangsters () {
           y: path[1][1]
         }
         gangster.goal = nextPositionWorld
-
+      } else {
+        startGame()
       }
     }
 
@@ -202,7 +216,21 @@ function render() {
   renderPlayer(state.player)
   renderShops(state.shops)
   renderBanks(state.banks)
+
+  if (!state.started) {
+    renderStartScreen()
+    return
+  }
+
   renderMoney(state.money)
+
+  function renderStartScreen () {
+    ctx.font = '40px Courier'
+    ctx.fillStyle='black'
+    ctx.fillText(`Money Transporter`,180,250)
+    ctx.font = '25px Courier'
+    ctx.fillText(`press space to continue`,180,300)
+  }
 
   function renderWorld(world) {
     world.forEach((line, y) => {
