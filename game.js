@@ -6,6 +6,9 @@ const CAR_LENGTH = 12
 const CAR_WIDTH = 8
 const PLAYER_SPEED = 2
 
+let highscore = 0
+let lastscore = 0
+
 const size = {
   width: 48,
   height: 40
@@ -306,6 +309,8 @@ function updateGangsters () {
 
     function restartGameOnCollision(player, gangster) {
       if(arePlayerAndGangsterColliding(player, gangster)) {
+        highscore = highscore > state.money.delivered ? highscore : state.money.delivered
+        lastscore = state.money.delivered
         startGame()
       }
     }
@@ -343,12 +348,16 @@ function render() {
       'space bar: stop the car',
       'bring cash from stores to banks',
       'avoid the gangsters',
-      'more money = more problems'
+      'more money = more problems',
+      '',
+      `high score: ${highscore}  last score: ${lastscore}`
     ]
     explanations.forEach((explanation, index) => {
       const explanationSizes = ctx.measureText(explanation)
       ctx.fillText(explanation,(CANVAS.width - explanationSizes.width)/2,300 + index * 40)
     })
+
+
   }
 
   function renderWorld(world) {
@@ -398,8 +407,9 @@ function render() {
   function renderMoney (money) {
     ctx.font = '20px Courier'
     ctx.fillStyle='black'
-    ctx.fillText(`current:   $${money.current}`,100,660);
-    ctx.fillText(`delivered: $${money.delivered}`,300,660);
+    ctx.fillText(`current:   $${money.current}`,20,660);
+    ctx.fillText(`delivered: $${money.delivered}`,220,660);
+    ctx.fillText(`high score: $${highscore}`, 540, 660)
   }
 
   function renderCar (position, direction, image) {
