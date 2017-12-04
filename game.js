@@ -5,6 +5,7 @@ const TILE_SIZE = 16
 const CAR_LENGTH = 12
 const CAR_WIDTH = 8
 const PLAYER_SPEED = 2
+const MAX_SHOP_MONEY = 200
 
 let highscore = 0
 let lastscore = 0
@@ -16,10 +17,6 @@ const size = {
 const blockSize = {
   width: 6,
   height: 4
-}
-const buildingSize = {
-  width: 1,
-  height: 2
 }
 
 const images = {
@@ -138,9 +135,18 @@ function update() {
     }
   }
 
+  updateBuildings()
   updateMoney()
   updatePlayer()
   updateGangsters()
+}
+
+function updateBuildings () {
+  state.buildings
+    .filter(building => building.type === 'shop')
+    .forEach(building => {
+      if(building.money < MAX_SHOP_MONEY) building.money += 0.05
+  })
 }
 
 function updateMoney() {
@@ -149,8 +155,11 @@ function updateMoney() {
   if (currentTile.dropOffZone && state.money.current > 0) {
     state.money.current -= 1
     state.money.delivered += 1
-  }  else if (currentTile.pickUpZone) {
-    state.money.current += 1
+  }  else if (currentTile.shop) {
+    if (currentTile.shop.money >= 1) {
+      currentTile.shop.money -= 1
+      state.money.current += 1
+    }
   }
 }
 
@@ -353,7 +362,7 @@ function render() {
       'avoid the gangsters',
       'more money = more problems',
       '',
-      `high score: ${highscore}  last score: ${lastscore}`
+      `high score: $${highscore}  last score: $${lastscore}`
     ]
     explanations.forEach((explanation, index) => {
       const explanationSizes = ctx.measureText(explanation)
@@ -376,7 +385,7 @@ function render() {
             ctx.fillStyle = 'green'
             ctx.fillRect(x * TILE_SIZE, y* TILE_SIZE, TILE_SIZE, TILE_SIZE)
             ctx.globalAlpha = 1.0
-          } else if (tile.pickUpZone) {
+          } else if (tile.shop) {
             ctx.globalAlpha = 0.2
             ctx.fillStyle = 'blue'
             ctx.fillRect(x * TILE_SIZE, y* TILE_SIZE, TILE_SIZE, TILE_SIZE)
@@ -393,6 +402,20 @@ function render() {
         ctx.drawImage(images[building.type], building.position.x * TILE_SIZE, building.position.y * TILE_SIZE)
       } else {
         ctx.drawImage(images.resedentials[building.imageId], building.position.x * TILE_SIZE, building.position.y * TILE_SIZE)
+      }
+      if (building.type === 'shop') {
+        ctx.globalAlpha = 0.2
+        ctx.fillStyle = 'blue'
+        const buildingHeight = 4 * TILE_SIZE
+        const loadingSize = buildingHeight * (building.money / MAX_SHOP_MONEY)
+        const offset = buildingHeight - loadingSize
+        ctx.fillRect(
+          building.position.x * TILE_SIZE,
+          building.position.y * TILE_SIZE + offset,
+          2 * TILE_SIZE,
+          loadingSize
+        )
+        ctx.globalAlpha = 1
       }
     })
   }
@@ -503,15 +526,7 @@ function createBuildings () {
 
     const streetPos = getStreetForBuildingPosition({x,y})
 
-    if (type === 'bank') {
-      state.world[streetPos.y][streetPos.x].dropOffZone = true
-      state.world[streetPos.y][streetPos.x-1].dropOffZone = true
-    } else if(type === 'shop') {
-      state.world[streetPos.y][streetPos.x].pickUpZone = true
-      state.world[streetPos.y][streetPos.x-1].pickUpZone = true
-    }
-
-    return {
+    const building = {
       id,
       type,
       position: {
@@ -520,6 +535,17 @@ function createBuildings () {
       },
       imageId: Math.floor(Math.random() * images.resedentials.length)
     }
+
+    if (type === 'bank') {
+      state.world[streetPos.y][streetPos.x].dropOffZone = true
+      state.world[streetPos.y][streetPos.x-1].dropOffZone = true
+    } else if(type === 'shop') {
+      building.money = Math.floor(Math.random() * MAX_SHOP_MONEY)
+      state.world[streetPos.y][streetPos.x].shop = building
+      state.world[streetPos.y][streetPos.x-1].shop = building
+    }
+
+    return building
   }
 }
 
