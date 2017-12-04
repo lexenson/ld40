@@ -119,6 +119,16 @@ function update() {
     state.gangsters.push(newGangster)
   }
 
+  if(state.money.current / 100 > state.gangsters.filter(gangster => gangster.active).length) {
+    const firstInactiveGangster = state.gangsters.find(gangster => !gangster.active)
+    if (firstInactiveGangster) firstInactiveGangster.active = true
+  }
+
+  if(state.money.current / 100 < state.gangsters.filter(gangster => gangster.active).length) {
+    const firstActiveGangster = state.gangsters.find(gangster => gangster.active)
+    if (firstActiveGangster) firstActiveGangster.active = false
+  }
+
   updateMoney()
   updatePlayer()
   updateGangsters()
@@ -179,10 +189,12 @@ function updatePlayer() {
 
 function updateGangsters () {
   state.gangsters.forEach(gangster => {
-    if(gangster.active) {
-      changeGangsterDirectionTowardsPlayer(gangster, state.player)
-    } else if (isExactlyOnGrid(gangster)) {
-      changeGangsterDirectionRandomly(gangster)
+    if(isExactlyOnGrid(gangster)) {
+      if(gangster.active) {
+        changeGangsterDirectionTowardsPlayer(gangster, state.player)
+      } else{
+        changeGangsterDirectionRandomly(gangster)
+      }
     }
 
     moveGangster(gangster)
@@ -201,6 +213,7 @@ function updateGangsters () {
 
     function changeGangsterDirectionTowardsPlayer(gangster, player) {
       if (!gangster.goal || gangster.position.x / 16 === gangster.goal.x && gangster.position.y / 16 === gangster.goal.y) {
+        console.log(gangster)
         const gangsterWorldPosition = getWorldPosition(gangster.position)
         const playerWorldPosition = getWorldPosition(player.position)
         const path = finder.findPath(
@@ -220,8 +233,8 @@ function updateGangsters () {
       }
   
       gangster.direction = {
-        x: Math.max(-1, Math.min(1, gangster.goal.x * 16 - gangster.position.x)),
-        y: Math.max(-1, Math.min(1, gangster.goal.y * 16 - gangster.position.y))
+        x: Math.max(-1, Math.min(1, gangster.goal.x * TILE_SIZE - gangster.position.x)),
+        y: Math.max(-1, Math.min(1, gangster.goal.y * TILE_SIZE - gangster.position.y))
       }
     }
 
