@@ -135,6 +135,12 @@ function updateMoney() {
   }
 }
 
+function getTile (x, y) {
+  const row = state.world[y]
+  if (!row) return false
+  return row[x]
+}
+
 function updatePlayer() {
   if(state.requestedDirection.x !== 0) {
     calculateMovement('x')
@@ -144,11 +150,7 @@ function updatePlayer() {
     calculateMovement('y')
   }
 
-  function getTile (x, y) {
-    const row = state.world[y]
-    if (!row) return false
-    return row[x]
-  }
+
 
   function calculateMovement (axis) {
     const otherAxis = axis === 'x' ? 'y' : 'x'
@@ -177,36 +179,84 @@ function updatePlayer() {
 
 function updateGangsters () {
   state.gangsters.forEach(gangster => {
-    if (!gangster.goal || gangster.position.x / 16 === gangster.goal.x && gangster.position.y / 16 === gangster.goal.y) {
-      const path = finder.findPath(
-        Math.floor(gangster.position.x / 16),
-        Math.floor(gangster.position.y / 16),
-        Math.floor(state.player.position.x / 16),
-        Math.floor(state.player.position.y / 16),
-        state.pfGrid.clone()
-      )
-      if (path.length > 1) {
-        const nextPositionWorld = {
-          x: path[1][0],
-          y: path[1][1]
-        }
-        gangster.goal = nextPositionWorld
-      } 
+    if(gangster.active) {
+      changeGangsterDirectionTowardsPlayer(gangster, state.player)
+    } else if (isExactlyOnGrid(gangster)) {
+      changeGangsterDirectionRandomly(gangster)
     }
 
-    gangster.direction = {
-      x: Math.max(-1, Math.min(1, gangster.goal.x * 16 - gangster.position.x)),
-      y: Math.max(-1, Math.min(1, gangster.goal.y * 16 - gangster.position.y))
+    moveGangster(gangster)
+    restartGameOnCollision(state.player, gangster)
+
+    function changeGangsterDirectionRandomly(gangster) {
+      const availableDirections = getAvailableDirectionsWithoutGoingBack(gangster.position, gangster.direction)
+
+      if(availableDirections.length === 0) {
+        gangster.direction.x = -gangster.direction.x
+        gangster.direction.y = -gangster.direction.y
+      } else {
+        gangster.direction = availableDirections[Math.floor(Math.random() * availableDirections.length)]
+      }
     }
 
-    gangster.position = {
-      x: gangster.position.x + gangster.direction.x * gangster.speed,
-      y: gangster.position.y + gangster.direction.y * gangster.speed,
+    function changeGangsterDirectionTowardsPlayer(gangster, player) {
+      if (!gangster.goal || gangster.position.x / 16 === gangster.goal.x && gangster.position.y / 16 === gangster.goal.y) {
+        const gangsterWorldPosition = getWorldPosition(gangster.position)
+        const playerWorldPosition = getWorldPosition(player.position)
+        const path = finder.findPath(
+          gangsterWorldPosition.x,
+          gangsterWorldPosition.y,
+          playerWorldPosition.x,
+          playerWorldPosition.y,
+          state.pfGrid.clone()
+        )
+        if (path.length > 1) {
+          const nextPositionWorld = {
+            x: path[1][0],
+            y: path[1][1]
+          }
+          gangster.goal = nextPositionWorld
+        } 
+      }
+  
+      gangster.direction = {
+        x: Math.max(-1, Math.min(1, gangster.goal.x * 16 - gangster.position.x)),
+        y: Math.max(-1, Math.min(1, gangster.goal.y * 16 - gangster.position.y))
+      }
     }
 
-    if(arePlayerAndGangsterColliding(state.player, gangster)) {
-      console.log('COLLISION: ', state.player, gangster)
-      startGame()
+    function getAvailableDirectionsWithoutGoingBack(position, direction) {
+      const worldPosition = getWorldPosition(position)
+
+      const availableDirections = []
+      
+      const leftTile = getTile(worldPosition.x - 1, worldPosition.y)
+      const rightTile = getTile(worldPosition.x + 1, worldPosition.y)
+      const upTile = getTile(worldPosition.x, worldPosition.y - 1 )
+      const downTile = getTile(worldPosition.x, worldPosition.y + 1)
+
+
+      if(leftTile && leftTile.type === 'street' && direction.x !== 1) {
+        availableDirections.push({x: -1, y: 0})
+      }
+      if(rightTile && rightTile.type === 'street' && direction.x !== -1) {
+        availableDirections.push({x: 1, y: 0})
+      }
+      if(upTile && upTile.type === 'street' && direction.y !== 1) {
+        availableDirections.push({x: 0, y: -1})
+      }
+      if(downTile && downTile.type === 'street' && direction.y !== -1) {
+        availableDirections.push({x: 0, y: 1})
+      }
+
+      return availableDirections
+    }
+
+    function getWorldPosition(pixelPosition) {
+      return {
+        x: Math.floor(pixelPosition.x / TILE_SIZE),
+        y: Math.floor(pixelPosition.y / TILE_SIZE)        
+      }
     }
 
     function arePlayerAndGangsterColliding(player, gangster) {
@@ -222,6 +272,23 @@ function updateGangsters () {
         player.position.y + (TILE_SIZE - player_height)/2 < gangster.position.y + gangster_height + (TILE_SIZE - gangster_height)/2 &&
         player.position.y + player_height + (TILE_SIZE - player_height)/2 > gangster.position.y + (TILE_SIZE - gangster_height)/2
       )
+    }
+
+    function isExactlyOnGrid(gangster) {
+      return gangster.position.x % TILE_SIZE === 0 && gangster.position.y % TILE_SIZE === 0
+    }
+
+    function moveGangster(gangster) {
+      gangster.position = {
+        x: gangster.position.x + gangster.direction.x * gangster.speed,
+        y: gangster.position.y + gangster.direction.y * gangster.speed,
+      }
+    }
+
+    function restartGameOnCollision(player, gangster) {
+      if(arePlayerAndGangsterColliding(player, gangster)) {
+        startGame()
+      }
     }
   })
 }
@@ -416,6 +483,7 @@ function createGangster () {
   const gangsterBuilding = gangsterBuildings[Math.floor(Math.random() * gangsterBuildings.length)]
   const streetPos = getStreetForBuildingPosition(gangsterBuilding.position)
   return {
+    active: false,
     direction: {
       x: 0,
       y: 1
