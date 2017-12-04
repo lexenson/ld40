@@ -89,18 +89,6 @@ function handleInput() {
     if (event.key === ' ') {
       state.started = true
     }
-    // if (event.key === 'ArrowDown'  && state.requestedDirection.y === +1) {
-    //   state.requestedDirection.y = 0
-    // }
-    // if (event.key === 'ArrowUp'  && state.requestedDirection.y === -1) {
-    //   state.requestedDirection.y = 0
-    // }
-    // if (event.key === 'ArrowLeft'  && state.requestedDirection.x === -1) {
-    //   state.requestedDirection.x = 0
-    // }
-    // if (event.key === 'ArrowRight'  && state.requestedDirection.x === +1) {
-    //   state.requestedDirection.x = 0
-    // }
   })
 }
 
@@ -171,8 +159,12 @@ function updatePlayer() {
 
     if (nextTile && nextTile.type === 'street') {
       if (state.player.position[otherAxis] % 16 === 0) {
-        state.player.direction[axis] = Math.min(1, Math.max(-1, newPositionAxis - state.player.position[axis]))
-        state.player.direction[otherAxis] = 0
+        const newDirectionAxis = Math.min(1, Math.max(-1, newPositionAxis - state.player.position[axis]))
+        if (state.player.direction[axis] !== newDirectionAxis || state.player.direction[otherAxis] !== 0) {
+          state.player.direction[axis] = newDirectionAxis
+          state.player.direction[otherAxis] = 0
+          state.requestedDirection[otherAxis] = 0
+        }
         state.player.position[axis] = newPositionAxis
       }
     }
