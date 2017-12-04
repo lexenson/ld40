@@ -28,6 +28,7 @@ const images = {
     getImage('building_02'),
     getImage('building_03')
   ],
+  gangsterBuilding: getImage('building_gangster'),
   bank: getImage('bank'),
   shop: getImage('shop'),
   streets: {
@@ -60,41 +61,7 @@ const initialState = {
       y: 16
     }
   },
-  gangsters: [
-    {
-      direction: {
-        x: 0,
-        y: 1
-      },
-      speed: 1,
-      position: {
-        x: 13 * 16,
-        y: 16
-      }
-    },
-    {
-      direction: {
-        x: 0,
-        y: 1
-      },
-      speed: 1,
-      position: {
-        x: 30 * 16,
-        y: 9 * 16
-      }
-    },
-    {
-      direction: {
-        x: 0,
-        y: 1
-      },
-      speed: 1,
-      position: {
-        x: 25 * 16,
-        y: 29 * 16
-      }
-    }
-  ]
+  gangsters: []
 }
 
 var state
@@ -154,6 +121,12 @@ function gameLoop() {
 
 function update() {
   if (!state.started) return
+
+  if (state.money.delivered / 100 > state.gangsters.length + 1) {
+    const newGangster = createGangster()
+    state.gangsters.push(newGangster)
+  }
+
   updateMoney()
   updatePlayer()
   updateGangsters()
@@ -259,11 +232,19 @@ function render() {
   renderMoney(state.money)
 
   function renderStartScreen () {
-    ctx.font = '40px Courier'
+    ctx.globalAlpha = 0.5
+    ctx.fillStyle = 'black'
+    ctx.fillRect(0, 0, size.width * TILE_SIZE, size.height * TILE_SIZE)
+    ctx.globalAlpha = 1
+    ctx.font = '45px Courier'
+    const title = '💸 Money Transporter 💸'
+    const titleSizes = ctx.measureText(title)
     ctx.fillStyle='white'
-    ctx.fillText(`Money Transporter`,180,250)
+    ctx.fillText(title,(CANVAS.width - titleSizes.width)/2,250)
     ctx.font = '25px Courier'
-    ctx.fillText(`press space to continue`,180,300)
+    const explanation = 'press space to continue'
+    const explanationSizes = ctx.measureText(title)
+    ctx.fillText(explanation,(CANVAS.width - explanationSizes.width)/2,300)
   }
 
   function renderWorld(world) {
@@ -293,9 +274,9 @@ function render() {
   function renderBuildings (buildings) {
     buildings.forEach((building) => {
       if (building.type !== 'resedential') {
-        ctx.drawImage(images[building.type], building.position.x, building.position.y)
+        ctx.drawImage(images[building.type], building.position.x * TILE_SIZE, building.position.y * TILE_SIZE)
       } else {
-        ctx.drawImage(images.resedentials[building.imageId], building.position.x, building.position.y)
+        ctx.drawImage(images.resedentials[building.imageId], building.position.x * TILE_SIZE, building.position.y * TILE_SIZE)
       }
     })
   }
@@ -366,9 +347,9 @@ function createBuildings () {
   for (let y = -1; y < size.height; y++) {
     for (let x = -1; x < size.width; x++) {
       if((x + 1) % (blockSize.width + 1) == 0 && (y) % (blockSize.height + 1) == 0) {
-        buildings.push(createBuilding({x,y}))
-        buildings.push(createBuilding({x: x + 2, y}))
-        buildings.push(createBuilding({x: x + 4, y}))
+        buildings.push(createBuilding({x: x + 1,y}))
+        buildings.push(createBuilding({x: x + 3, y}))
+        buildings.push(createBuilding({x: x + 5, y}))
       }
     }
   }
@@ -382,24 +363,28 @@ function createBuilding ({x, y}) {
     type = 'bank'
   } else if (random < 0.07) {
     type = 'shop'
+  } else if (random < 0.1) {
+    type = 'gangsterBuilding'
   }
 
   const id = Math.random()
 
+  const streetPos = getStreetForBuildingPosition({x,y})
+
   if (type === 'bank') {
-    state.world[y+4][x+1].dropOffZone = true
-    state.world[y+4][x+2].dropOffZone = true
+    state.world[streetPos.y][streetPos.x].dropOffZone = true
+    state.world[streetPos.y][streetPos.x-1].dropOffZone = true
   } else if(type === 'shop') {
-    state.world[y+4][x+1].pickUpZone = true
-    state.world[y+4][x+2].pickUpZone = true
+    state.world[streetPos.y][streetPos.x].pickUpZone = true
+    state.world[streetPos.y][streetPos.x-1].pickUpZone = true
   }
 
   return {
     id,
     type,
     position: {
-      x: x * TILE_SIZE + 16,
-      y: y * TILE_SIZE
+      x,
+      y
     },
     imageId: Math.floor(Math.random() * images.resedentials.length)
   }
@@ -412,4 +397,30 @@ function startGame () {
   state.pfGrid = new PF.Grid(
     state.world.map(line => line.map(tile => tile.type !== 'street' ? 1 : 0))
   )
+}
+
+
+function createGangster () {
+  const gangsterBuildings = state.buildings
+    .filter(building => building.type === 'gangsterBuilding')
+  const gangsterBuilding = gangsterBuildings[Math.floor(Math.random() * gangsterBuildings.length)]
+  const streetPos = getStreetForBuildingPosition(gangsterBuilding.position)
+  return {
+    direction: {
+      x: 0,
+      y: 1
+    },
+    speed: 1,
+    position: {
+      x: (streetPos.x + 1) * TILE_SIZE,
+      y: streetPos.y * TILE_SIZE
+    }
+  }
+}
+
+function getStreetForBuildingPosition ({x,y}) {
+  return {
+    y: y + 4,
+    x: x + 1
+  }
 }
