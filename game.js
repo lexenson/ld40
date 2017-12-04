@@ -126,7 +126,10 @@ function update() {
 
   if(state.money.current / 100 < state.gangsters.filter(gangster => gangster.active).length) {
     const firstActiveGangster = state.gangsters.find(gangster => gangster.active)
-    if (firstActiveGangster) firstActiveGangster.active = false
+    if (firstActiveGangster) {
+      firstActiveGangster.active = false
+      firstActiveGangster.goal = undefined
+    }
   }
 
   updateMoney()
@@ -212,8 +215,7 @@ function updateGangsters () {
     }
 
     function changeGangsterDirectionTowardsPlayer(gangster, player) {
-      if (!gangster.goal || gangster.position.x / 16 === gangster.goal.x && gangster.position.y / 16 === gangster.goal.y) {
-        console.log(gangster)
+      if (!gangster.goal || isOnGoal(gangster.position, gangster.goal)) {
         const gangsterWorldPosition = getWorldPosition(gangster.position)
         const playerWorldPosition = getWorldPosition(player.position)
         const path = finder.findPath(
@@ -236,6 +238,10 @@ function updateGangsters () {
         x: Math.max(-1, Math.min(1, gangster.goal.x * TILE_SIZE - gangster.position.x)),
         y: Math.max(-1, Math.min(1, gangster.goal.y * TILE_SIZE - gangster.position.y))
       }
+    }
+
+    function isOnGoal(position, goal) {
+      return position.x / TILE_SIZE === goal.x && position.y / TILE_SIZE === goal.y
     }
 
     function getAvailableDirectionsWithoutGoingBack(position, direction) {
