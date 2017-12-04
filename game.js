@@ -231,9 +231,9 @@ function updateGangsters () {
             y: path[1][1]
           }
           gangster.goal = nextPositionWorld
-        } 
+        }
       }
-  
+
       gangster.direction = {
         x: Math.max(-1, Math.min(1, gangster.goal.x * TILE_SIZE - gangster.position.x)),
         y: Math.max(-1, Math.min(1, gangster.goal.y * TILE_SIZE - gangster.position.y))
@@ -248,7 +248,7 @@ function updateGangsters () {
       const worldPosition = getWorldPosition(position)
 
       const availableDirections = []
-      
+
       const leftTile = getTile(worldPosition.x - 1, worldPosition.y)
       const rightTile = getTile(worldPosition.x + 1, worldPosition.y)
       const upTile = getTile(worldPosition.x, worldPosition.y - 1 )
@@ -274,7 +274,7 @@ function updateGangsters () {
     function getWorldPosition(pixelPosition) {
       return {
         x: Math.floor(pixelPosition.x / TILE_SIZE),
-        y: Math.floor(pixelPosition.y / TILE_SIZE)        
+        y: Math.floor(pixelPosition.y / TILE_SIZE)
       }
     }
 
@@ -338,9 +338,17 @@ function render() {
     ctx.fillStyle='white'
     ctx.fillText(title,(CANVAS.width - titleSizes.width)/2,250)
     ctx.font = '25px Courier'
-    const explanation = 'press space to continue'
-    const explanationSizes = ctx.measureText(title)
-    ctx.fillText(explanation,(CANVAS.width - explanationSizes.width)/2,300)
+    const explanations = [
+      'arrow keys: control your car',
+      'space bar: stop the car',
+      'bring cash from stores to banks',
+      'avoid the gangsters',
+      'more money = more problems'
+    ]
+    explanations.forEach((explanation, index) => {
+      const explanationSizes = ctx.measureText(explanation)
+      ctx.fillText(explanation,(CANVAS.width - explanationSizes.width)/2,300 + index * 40)
+    })
   }
 
   function renderWorld(world) {
