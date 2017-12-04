@@ -22,6 +22,7 @@ const blockSize = {
 const images = {
   transporter: getImage('money_transporter'),
   gangster: getImage('gangster_car'),
+  gangster_chasing: getImage('gangster_car_chasing'),
   block: getImage('block'),
   resedentials: [
     getImage('building_01'),
@@ -426,7 +427,11 @@ function render() {
 
   function renderGangsters(gangsters) {
     gangsters.forEach(gangster => {
-      renderCar(gangster.position, gangster.direction, images.gangster)
+      if(gangster.active) {
+        renderCar(gangster.position, gangster.direction, images.gangster_chasing)
+      } else {
+        renderCar(gangster.position, gangster.direction, images.gangster)
+      }
     })
   }
 
