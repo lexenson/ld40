@@ -117,17 +117,20 @@ function gameLoop() {
 function update() {
   if (!state.started) return
 
-  if (state.money.delivered / 100 > state.gangsters.length + 1) {
+  if (state.money.delivered / 100 >= state.gangsters.length) {
     const newGangster = createGangster()
     state.gangsters.push(newGangster)
   }
 
-  if(state.money.current / 100 > state.gangsters.filter(gangster => gangster.active).length) {
+  const activeGansters = state.gangsters.filter(gangster => gangster.active).length
+
+  if(Math.ceil(state.money.current / 100) > activeGansters) {
     const firstInactiveGangster = state.gangsters.find(gangster => !gangster.active)
     if (firstInactiveGangster) firstInactiveGangster.active = true
   }
 
-  if(state.money.current / 100 < state.gangsters.filter(gangster => gangster.active).length) {
+
+  if(Math.ceil(state.money.current / 100) < activeGansters) {
     const firstActiveGangster = state.gangsters.find(gangster => gangster.active)
     if (firstActiveGangster) {
       firstActiveGangster.active = false
