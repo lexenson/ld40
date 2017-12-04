@@ -7,6 +7,7 @@ const CAR_WIDTH = 8
 const PLAYER_SPEED = 2
 const MAX_SHOP_MONEY = 200
 const MAX_BANK_MONEY = 400
+const MAX_POLICE_MONEY = 200
 
 let highscore = 0
 let lastscore = 0
@@ -33,6 +34,7 @@ const images = {
   gangsterBuilding: getImage('building_gangster'),
   bank: getImage('bank'),
   shop: getImage('shop'),
+  police: getImage('police'),
   streets: {
     vertical: getImage('street_vertical'),
     horizontal: getImage('street_horizontal'),
@@ -149,7 +151,9 @@ function updateBuildings (iterator) {
   state.buildings
     .forEach(building => {
       if(building.type === 'shop' && iterator % 20 === 0 && building.money < MAX_SHOP_MONEY) building.money += 1
-      if(building.type === 'bank' && iterator % 60 === 0  && building.money > 0) building.money -= 1
+      if(building.type === 'bank' && iterator % 20 === 0  && building.money > 0) {
+        building.money -= 1
+      }
   })
 }
 
@@ -166,6 +170,11 @@ function updateMoney() {
     if (currentTile.shop.money >= 1) {
       currentTile.shop.money -= 1
       state.money.current += 1
+    }
+  } else if (currentTile.police && state.money.current > 0) {
+    if (currentTile.police.money < MAX_POLICE_MONEY) {
+      state.money.current -= 1
+      currentTile.police.money += 1
     }
   }
 }
@@ -357,10 +366,11 @@ function render() {
     ctx.fillRect(0, 0, size.width * TILE_SIZE, size.height * TILE_SIZE)
     ctx.globalAlpha = 1
     ctx.font = '45px Courier'
+    const topPosition = 200
     const title = '💸 Money Transporter 💸'
     const titleSizes = ctx.measureText(title)
     ctx.fillStyle='white'
-    ctx.fillText(title,(CANVAS.width - titleSizes.width)/2,250)
+    ctx.fillText(title,(CANVAS.width - titleSizes.width)/2,topPosition)
     ctx.font = '25px Courier'
     const explanations = [
       'arrow keys: control your car',
@@ -373,7 +383,7 @@ function render() {
     ]
     explanations.forEach((explanation, index) => {
       const explanationSizes = ctx.measureText(explanation)
-      ctx.fillText(explanation,(CANVAS.width - explanationSizes.width)/2,300 + index * 40)
+      ctx.fillText(explanation,(CANVAS.width - explanationSizes.width)/2,(50 + topPosition) + index * 40)
     })
 
 
@@ -387,20 +397,25 @@ function render() {
           if (!tile.horizontal) imageType = 'vertical'
           if (!tile.vertical) imageType = 'horizontal'
           ctx.drawImage(images.streets[imageType], x * TILE_SIZE, y * TILE_SIZE)
-          if (tile.bank) {
-            ctx.globalAlpha = 0.2
-            ctx.fillStyle = 'green'
-            ctx.fillRect(x * TILE_SIZE, y* TILE_SIZE, TILE_SIZE, TILE_SIZE)
-            ctx.globalAlpha = 1.0
-          } else if (tile.shop) {
-            ctx.globalAlpha = 0.2
-            ctx.fillStyle = 'blue'
-            ctx.fillRect(x * TILE_SIZE, y* TILE_SIZE, TILE_SIZE, TILE_SIZE)
-            ctx.globalAlpha = 1.0
+          if (tile.bank && state.money.current > 0) {
+            renderLoadingZone('green', x, y)
+          }
+          if (tile.police && state.money.current > 0) {
+            renderLoadingZone('green', x, y)
+          }
+          if (tile.shop) {
+            renderLoadingZone('blue', x, y)
           }
         }
       })
     })
+  }
+
+  function renderLoadingZone(color,x , y) {
+    ctx.globalAlpha = 0.2
+    ctx.fillStyle = color
+    ctx.fillRect(x * TILE_SIZE, y* TILE_SIZE, TILE_SIZE, TILE_SIZE)
+    ctx.globalAlpha = 1.0
   }
 
   function renderBuildings (buildings) {
@@ -416,11 +431,14 @@ function render() {
       if (building.type === 'bank') {
         renderMoneyBar('green', building.money / MAX_BANK_MONEY, building.position)
       }
+      if (building.type === 'police') {
+        renderMoneyBar('green', building.money / MAX_POLICE_MONEY, building.position)
+      }
     })
   }
 
   function renderMoneyBar (color, ratio, position) {
-    ctx.globalAlpha = 0.2
+    ctx.globalAlpha = 0.3
     ctx.fillStyle = color
     const buildingHeight = 4 * TILE_SIZE
     const loadingSize = buildingHeight * ratio
@@ -502,9 +520,10 @@ function createWorld () {
 
 function createBuildings () {
   const buildingDistribution = shuffle(repeat('shop', 5)
+    .concat(repeat('police', 1))
     .concat(repeat('bank', 2))
     .concat(repeat('gangsterBuilding', 5))
-    .concat(repeat('resedential', 8 * 7 * 3 - 12)))
+    .concat(repeat('resedential', 8 * 7 * 3 - 13)))
 
   const buildings = []
   for (let y = -1; y < size.height; y++) {
@@ -562,6 +581,10 @@ function createBuildings () {
       building.money = Math.floor(Math.random() * MAX_SHOP_MONEY)
       state.world[streetPos.y][streetPos.x].shop = building
       state.world[streetPos.y][streetPos.x-1].shop = building
+    } else if(type === 'police') {
+      building.money = 0
+      state.world[streetPos.y][streetPos.x].police = building
+      state.world[streetPos.y][streetPos.x-1].police = building
     }
 
     return building
