@@ -191,9 +191,7 @@ function updateGangsters () {
           y: path[1][1]
         }
         gangster.goal = nextPositionWorld
-      } else {
-        startGame()
-      }
+      } 
     }
 
     gangster.direction = {
@@ -205,8 +203,27 @@ function updateGangsters () {
       x: gangster.position.x + gangster.direction.x * gangster.speed,
       y: gangster.position.y + gangster.direction.y * gangster.speed,
     }
+
+    if(arePlayerAndGangsterColliding(state.player, gangster)) {
+      console.log('COLLISION: ', state.player, gangster)
+      startGame()
     }
-  )
+
+    function arePlayerAndGangsterColliding(player, gangster) {
+      const gangster_width = gangster.direction.y !== 0 ? CAR_WIDTH : CAR_LENGTH
+      const gangster_height = gangster.direction.y !== 0 ? CAR_LENGTH : CAR_WIDTH
+
+      const player_width = player.direction.y !== 0 ? CAR_WIDTH : CAR_LENGTH
+      const player_height = player.direction.y !== 0 ? CAR_LENGTH : CAR_WIDTH
+
+      return (
+        player.position.x + (TILE_SIZE - player_width)/2 < gangster.position.x + gangster_width + (TILE_SIZE - gangster_width)/2 &&
+        player.position.x + player_width + (TILE_SIZE - player_width)/2 > gangster.position.x + (TILE_SIZE - gangster_width)/2 &&
+        player.position.y + (TILE_SIZE - player_height)/2 < gangster.position.y + gangster_height + (TILE_SIZE - gangster_height)/2 &&
+        player.position.y + player_height + (TILE_SIZE - player_height)/2 > gangster.position.y + (TILE_SIZE - gangster_height)/2
+      )
+    }
+  })
 }
 
 function render() {
