@@ -84,6 +84,10 @@ function handleInput() {
     if (event.key === 'ArrowRight') {
       state.requestedDirection.x = +1
     }
+    if (event.key === ' ') {
+      state.requestedDirection.x = 0
+      state.requestedDirection.y = 0
+    }
   })
   window.addEventListener('keyup', event => {
     if (event.key === ' ') {
