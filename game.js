@@ -6,6 +6,7 @@ const CAR_LENGTH = 12
 const CAR_WIDTH = 8
 const PLAYER_SPEED = 2
 const MAX_SHOP_MONEY = 200
+const MAX_BANK_MONEY = 400
 
 let highscore = 0
 let lastscore = 0
@@ -101,18 +102,20 @@ function gameLoop() {
   window.requestAnimationFrame(step)
 
   let start = 0
+  let iterator = 0
 
   function step(timestamp) {
     if( timestamp - start > 1000.0/60.0) {
+      iterator++
       render()
-      update()
+      update(iterator)
       start = timestamp
     }
     window.requestAnimationFrame(step)
   }
 }
 
-function update() {
+function update(iterator) {
   if (!state.started) return
 
   if (state.money.delivered / 100 >= state.gangsters.length) {
@@ -136,26 +139,29 @@ function update() {
     }
   }
 
-  updateBuildings()
+  updateBuildings(iterator)
   updateMoney()
   updatePlayer()
   updateGangsters()
 }
 
-function updateBuildings () {
+function updateBuildings (iterator) {
   state.buildings
-    .filter(building => building.type === 'shop')
     .forEach(building => {
-      if(building.money < MAX_SHOP_MONEY) building.money += 0.05
+      if(building.type === 'shop' && iterator % 20 === 0 && building.money < MAX_SHOP_MONEY) building.money += 1
+      if(building.type === 'bank' && iterator % 60 === 0  && building.money > 0) building.money -= 1
   })
 }
 
 function updateMoney() {
   const currentTile = state.world[Math.floor(state.player.position.y / 16)][Math.floor(state.player.position.x / 16)]
 
-  if (currentTile.dropOffZone && state.money.current > 0) {
-    state.money.current -= 1
-    state.money.delivered += 1
+  if (currentTile.bank && state.money.current > 0) {
+    if (currentTile.bank.money < MAX_BANK_MONEY) {
+      state.money.current -= 1
+      state.money.delivered += 1
+      currentTile.bank.money += 1
+    }
   }  else if (currentTile.shop) {
     if (currentTile.shop.money >= 1) {
       currentTile.shop.money -= 1
@@ -381,7 +387,7 @@ function render() {
           if (!tile.horizontal) imageType = 'vertical'
           if (!tile.vertical) imageType = 'horizontal'
           ctx.drawImage(images.streets[imageType], x * TILE_SIZE, y * TILE_SIZE)
-          if (tile.dropOffZone) {
+          if (tile.bank) {
             ctx.globalAlpha = 0.2
             ctx.fillStyle = 'green'
             ctx.fillRect(x * TILE_SIZE, y* TILE_SIZE, TILE_SIZE, TILE_SIZE)
@@ -405,20 +411,27 @@ function render() {
         ctx.drawImage(images.resedentials[building.imageId], building.position.x * TILE_SIZE, building.position.y * TILE_SIZE)
       }
       if (building.type === 'shop') {
-        ctx.globalAlpha = 0.2
-        ctx.fillStyle = 'blue'
-        const buildingHeight = 4 * TILE_SIZE
-        const loadingSize = buildingHeight * (building.money / MAX_SHOP_MONEY)
-        const offset = buildingHeight - loadingSize
-        ctx.fillRect(
-          building.position.x * TILE_SIZE,
-          building.position.y * TILE_SIZE + offset,
-          2 * TILE_SIZE,
-          loadingSize
-        )
-        ctx.globalAlpha = 1
+        renderMoneyBar('blue', building.money / MAX_SHOP_MONEY, building.position)
+      }
+      if (building.type === 'bank') {
+        renderMoneyBar('green', building.money / MAX_BANK_MONEY, building.position)
       }
     })
+  }
+
+  function renderMoneyBar (color, ratio, position) {
+    ctx.globalAlpha = 0.2
+    ctx.fillStyle = color
+    const buildingHeight = 4 * TILE_SIZE
+    const loadingSize = buildingHeight * ratio
+    const offset = buildingHeight - loadingSize
+    ctx.fillRect(
+      position.x * TILE_SIZE,
+      position.y * TILE_SIZE + offset,
+      2 * TILE_SIZE,
+      loadingSize
+    )
+    ctx.globalAlpha = 1
   }
 
   function renderPlayer(player) {
@@ -542,8 +555,9 @@ function createBuildings () {
     }
 
     if (type === 'bank') {
-      state.world[streetPos.y][streetPos.x].dropOffZone = true
-      state.world[streetPos.y][streetPos.x-1].dropOffZone = true
+      building.money = 0
+      state.world[streetPos.y][streetPos.x].bank = building
+      state.world[streetPos.y][streetPos.x-1].bank = building
     } else if(type === 'shop') {
       building.money = Math.floor(Math.random() * MAX_SHOP_MONEY)
       state.world[streetPos.y][streetPos.x].shop = building
