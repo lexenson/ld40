@@ -405,7 +405,7 @@ function createGangster () {
     },
     speed: 1,
     position: {
-      x: (streetPos.x + 1) * TILE_SIZE,
+      x: streetPos.x * TILE_SIZE,
       y: streetPos.y * TILE_SIZE
     }
   }
