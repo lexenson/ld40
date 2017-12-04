@@ -89,18 +89,18 @@ function handleInput() {
     if (event.key === ' ') {
       state.started = true
     }
-    if (event.key === 'ArrowDown'  && state.requestedDirection.y === +1) {
-      state.requestedDirection.y = 0
-    }
-    if (event.key === 'ArrowUp'  && state.requestedDirection.y === -1) {
-      state.requestedDirection.y = 0
-    }
-    if (event.key === 'ArrowLeft'  && state.requestedDirection.x === -1) {
-      state.requestedDirection.x = 0
-    }
-    if (event.key === 'ArrowRight'  && state.requestedDirection.x === +1) {
-      state.requestedDirection.x = 0
-    }
+    // if (event.key === 'ArrowDown'  && state.requestedDirection.y === +1) {
+    //   state.requestedDirection.y = 0
+    // }
+    // if (event.key === 'ArrowUp'  && state.requestedDirection.y === -1) {
+    //   state.requestedDirection.y = 0
+    // }
+    // if (event.key === 'ArrowLeft'  && state.requestedDirection.x === -1) {
+    //   state.requestedDirection.x = 0
+    // }
+    // if (event.key === 'ArrowRight'  && state.requestedDirection.x === +1) {
+    //   state.requestedDirection.x = 0
+    // }
   })
 }
 
@@ -168,15 +168,12 @@ function updatePlayer() {
       ? getTile(newPositionWorldAxis, oldPositionWorldOtherAxis)
       : getTile(oldPositionWorldOtherAxis, newPositionWorldAxis)
 
+
     if (nextTile && nextTile.type === 'street') {
       if (state.player.position[otherAxis] % 16 === 0) {
         state.player.direction[axis] = Math.min(1, Math.max(-1, newPositionAxis - state.player.position[axis]))
         state.player.direction[otherAxis] = 0
         state.player.position[axis] = newPositionAxis
-      } else {
-        state.player.direction[otherAxis] = Math.min(1, Math.max(-1, oldPositionWorldOtherAxis * TILE_SIZE - state.player.position[otherAxis]))
-        state.player.direction[axis] = 0
-        state.player.position[otherAxis] += state.player.direction[otherAxis]
       }
     }
   }
