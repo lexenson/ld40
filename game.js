@@ -447,50 +447,66 @@ function createWorld () {
 }
 
 function createBuildings () {
+  const buildingDistribution = shuffle(repeat('shop', 5)
+    .concat(repeat('bank', 2))
+    .concat(repeat('gangsterBuilding', 5))
+    .concat(repeat('resedential', 8 * 7 * 3 - 12)))
+
   const buildings = []
   for (let y = -1; y < size.height; y++) {
     for (let x = -1; x < size.width; x++) {
       if((x + 1) % (blockSize.width + 1) == 0 && (y) % (blockSize.height + 1) == 0) {
-        buildings.push(createBuilding({x: x + 1,y}))
-        buildings.push(createBuilding({x: x + 3, y}))
-        buildings.push(createBuilding({x: x + 5, y}))
+        buildings.push(createBuilding({x: x + 1,y, type: getBuildingType()}))
+        buildings.push(createBuilding({x: x + 3, y, type: getBuildingType()}))
+        buildings.push(createBuilding({x: x + 5, y, type: getBuildingType()}))
       }
     }
   }
   return buildings
-}
 
-function createBuilding ({x, y}) {
-  const random = Math.random()
-  let type = 'resedential'
-  if (random < 0.02) {
-    type = 'bank'
-  } else if (random < 0.07) {
-    type = 'shop'
-  } else if (random < 0.1) {
-    type = 'gangsterBuilding'
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
   }
 
-  const id = Math.random()
-
-  const streetPos = getStreetForBuildingPosition({x,y})
-
-  if (type === 'bank') {
-    state.world[streetPos.y][streetPos.x].dropOffZone = true
-    state.world[streetPos.y][streetPos.x-1].dropOffZone = true
-  } else if(type === 'shop') {
-    state.world[streetPos.y][streetPos.x].pickUpZone = true
-    state.world[streetPos.y][streetPos.x-1].pickUpZone = true
+  function repeat (string, times) {
+    const arr = []
+    for (var i = 0; i < times; i++) {
+      arr.push(string)
+    }
+    return arr
   }
 
-  return {
-    id,
-    type,
-    position: {
-      x,
-      y
-    },
-    imageId: Math.floor(Math.random() * images.resedentials.length)
+  function getBuildingType () {
+    return buildingDistribution.pop()
+  }
+
+
+  function createBuilding ({x, y, type}) {
+    const id = Math.random()
+
+    const streetPos = getStreetForBuildingPosition({x,y})
+
+    if (type === 'bank') {
+      state.world[streetPos.y][streetPos.x].dropOffZone = true
+      state.world[streetPos.y][streetPos.x-1].dropOffZone = true
+    } else if(type === 'shop') {
+      state.world[streetPos.y][streetPos.x].pickUpZone = true
+      state.world[streetPos.y][streetPos.x-1].pickUpZone = true
+    }
+
+    return {
+      id,
+      type,
+      position: {
+        x,
+        y
+      },
+      imageId: Math.floor(Math.random() * images.resedentials.length)
+    }
   }
 }
 
