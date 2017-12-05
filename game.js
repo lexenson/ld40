@@ -506,7 +506,7 @@ function render(iterator) {
 
   function renderMoney (money) {
     ctx.font = "20px 'Stardos Stencil'"
-    ctx.fillStyle='black'
+    ctx.fillStyle='white'
     ctx.fillText(`current:   $${money.current}`,20,660);
     ctx.fillText(`delivered: $${money.delivered}`,220,660);
     ctx.fillText(`high score: $${highscore}`, 540, 660)
