@@ -25,6 +25,7 @@ const blockSize = {
 }
 
 const images = {
+  shadow: getImage('shadow'),
   transporter: getImage('money_transporter'),
   gangster: getImage('gangster_car'),
   gangsterChasing: getImage('gangster_car_chasing'),
@@ -367,6 +368,16 @@ function render(iterator) {
   if (!state.started) {
     renderStartScreen()
     return
+  }
+
+  for (let y = -1; y < size.height; y++) {
+    for (let x = -1; x < size.width; x++) {
+      if((x + 1) % (blockSize.width + 1) == 0 && (y) % (blockSize.height + 1) == 0) {
+        ctx.globalAlpha = 0.3
+        ctx.drawImage(images.shadow, x * TILE_SIZE, (y-1) * TILE_SIZE)
+        ctx.globalAlpha = 1
+      }
+    }
   }
 
   renderMoney(state.money)
