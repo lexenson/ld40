@@ -77,17 +77,22 @@ function handleInput() {
   window.addEventListener('keydown', event => {
     if (event.key === 'ArrowDown') {
       state.requestedDirection.y = +1
+      event.preventDefault()
     }
     if (event.key === 'ArrowUp') {
       state.requestedDirection.y = -1
+      event.preventDefault()
     }
     if (event.key === 'ArrowLeft') {
       state.requestedDirection.x = -1
+      event.preventDefault()
     }
     if (event.key === 'ArrowRight') {
       state.requestedDirection.x = +1
+      event.preventDefault()
     }
     if (event.key === ' ') {
+      event.preventDefault()
       state.requestedDirection.x = 0
       state.requestedDirection.y = 0
     }
