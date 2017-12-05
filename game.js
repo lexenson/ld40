@@ -50,7 +50,7 @@ const images = {
 
 const finder = new PF.AStarFinder()
 
-const player = createCar({x:6, y: 1}, PLAYER_SPEED)
+const player = createCar({x:20, y: 4}, PLAYER_SPEED)
 
 const initialState = {
   started: false,
@@ -67,7 +67,7 @@ const initialState = {
   policeCar: false
 }
 
-var state
+let state
 startGame()
 
 handleInput()
@@ -386,6 +386,11 @@ function render(iterator) {
     ctx.globalAlpha = 0.5
     ctx.fillStyle = 'black'
     ctx.fillRect(0, 0, size.width * TILE_SIZE, size.height * TILE_SIZE)
+    ctx.globalAlpha = 0.2
+    ctx.beginPath()
+    ctx.fillStyle = 'white'
+    ctx.arc(20 * 16 + 8, 4 * 16 + 8,32,0, 2*Math.PI)
+    ctx.fill()
     ctx.globalAlpha = 1
     ctx.font = '45px Radley'
     const topPosition = 200
