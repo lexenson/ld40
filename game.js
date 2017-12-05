@@ -12,6 +12,8 @@ const MAX_POLICE_MONEY = 200
 let highscore = 0
 let lastscore = 0
 
+let totalNumberOfPoliceCars = 0
+
 const size = {
   width: 48,
   height: 40
@@ -24,7 +26,7 @@ const blockSize = {
 const images = {
   transporter: getImage('money_transporter'),
   gangster: getImage('gangster_car'),
-  gangster_chasing: getImage('gangster_car_chasing'),
+  gangsterChasing: getImage('gangster_car_chasing'),
   block: getImage('block'),
   resedentials: [
     getImage('building_01'),
@@ -35,6 +37,7 @@ const images = {
   bank: getImage('bank'),
   shop: getImage('shop'),
   police: getImage('police'),
+  policeCar: getImage('police_car'),
   streets: {
     vertical: getImage('street_vertical'),
     horizontal: getImage('street_horizontal'),
@@ -43,6 +46,8 @@ const images = {
 }
 
 const finder = new PF.AStarFinder()
+
+const player = createCar({x:6, y: 1}, PLAYER_SPEED)
 
 const initialState = {
   started: false,
@@ -54,18 +59,9 @@ const initialState = {
     current: 0,
     delivered: 0
   },
-  player: {
-    direction: {
-      x: 0,
-      y: 1
-    },
-    speed: PLAYER_SPEED,
-    position: {
-      x: 6 * 16,
-      y: 16
-    }
-  },
-  gangsters: []
+  player,
+  gangsters: [],
+  policeCar: false
 }
 
 var state
@@ -109,7 +105,7 @@ function gameLoop() {
   function step(timestamp) {
     if( timestamp - start > 1000.0/60.0) {
       iterator++
-      render()
+      render(iterator)
       update(iterator)
       start = timestamp
     }
@@ -145,6 +141,7 @@ function update(iterator) {
   updateMoney()
   updatePlayer()
   updateGangsters()
+  if(state.policeCar) updatePoliceCar()
 }
 
 function updateBuildings (iterator) {
@@ -158,7 +155,8 @@ function updateBuildings (iterator) {
 }
 
 function updateMoney() {
-  const currentTile = state.world[Math.floor(state.player.position.y / 16)][Math.floor(state.player.position.x / 16)]
+  const playerWorldPosition = getWorldPosition(state.player.position)
+  const currentTile = state.world[playerWorldPosition.y][playerWorldPosition.x]
 
   if (currentTile.bank && state.money.current > 0) {
     if (currentTile.bank.money < MAX_BANK_MONEY) {
@@ -171,10 +169,14 @@ function updateMoney() {
       currentTile.shop.money -= 1
       state.money.current += 1
     }
-  } else if (currentTile.police && state.money.current > 0) {
+  } else if (currentTile.police && state.money.current > 0 && !state.policeCar && state.gangsters.length / (totalNumberOfPoliceCars + 1) >= 5) {
     if (currentTile.police.money < MAX_POLICE_MONEY) {
       state.money.current -= 1
       currentTile.police.money += 1
+    } else {
+      currentTile.police.money = 0
+      state.policeCar = createPoliceCar(playerWorldPosition)
+      totalNumberOfPoliceCars++
     }
   }
 }
@@ -221,29 +223,31 @@ function updatePlayer() {
   }
 }
 
+function updatePoliceCar() {
+  if (isExactlyOnGrid(state.policeCar)) {
+    changeCarDirectionRandomly(state.policeCar)
+  }
+  moveCar(state.policeCar)
+
+}
+
 function updateGangsters () {
   state.gangsters.forEach(gangster => {
+    if (gangster.caught) return
     if(isExactlyOnGrid(gangster)) {
       if(gangster.active) {
         changeGangsterDirectionTowardsPlayer(gangster, state.player)
       } else{
-        changeGangsterDirectionRandomly(gangster)
+        changeCarDirectionRandomly(gangster)
       }
     }
 
-    moveGangster(gangster)
+    moveCar(gangster)
+    if (state.policeCar && areCarsColliding(state.policeCar, gangster)) {
+      state.policeCar = false
+      gangster.caught = true
+    }
     restartGameOnCollision(state.player, gangster)
-
-    function changeGangsterDirectionRandomly(gangster) {
-      const availableDirections = getAvailableDirectionsWithoutGoingBack(gangster.position, gangster.direction)
-
-      if(availableDirections.length === 0) {
-        gangster.direction.x = -gangster.direction.x
-        gangster.direction.y = -gangster.direction.y
-      } else {
-        gangster.direction = availableDirections[Math.floor(Math.random() * availableDirections.length)]
-      }
-    }
 
     function changeGangsterDirectionTowardsPlayer(gangster, player) {
       if (!gangster.goal || isOnGoal(gangster.position, gangster.goal)) {
@@ -275,68 +279,8 @@ function updateGangsters () {
       return position.x / TILE_SIZE === goal.x && position.y / TILE_SIZE === goal.y
     }
 
-    function getAvailableDirectionsWithoutGoingBack(position, direction) {
-      const worldPosition = getWorldPosition(position)
-
-      const availableDirections = []
-
-      const leftTile = getTile(worldPosition.x - 1, worldPosition.y)
-      const rightTile = getTile(worldPosition.x + 1, worldPosition.y)
-      const upTile = getTile(worldPosition.x, worldPosition.y - 1 )
-      const downTile = getTile(worldPosition.x, worldPosition.y + 1)
-
-
-      if(leftTile && leftTile.type === 'street' && direction.x !== 1) {
-        availableDirections.push({x: -1, y: 0})
-      }
-      if(rightTile && rightTile.type === 'street' && direction.x !== -1) {
-        availableDirections.push({x: 1, y: 0})
-      }
-      if(upTile && upTile.type === 'street' && direction.y !== 1) {
-        availableDirections.push({x: 0, y: -1})
-      }
-      if(downTile && downTile.type === 'street' && direction.y !== -1) {
-        availableDirections.push({x: 0, y: 1})
-      }
-
-      return availableDirections
-    }
-
-    function getWorldPosition(pixelPosition) {
-      return {
-        x: Math.floor(pixelPosition.x / TILE_SIZE),
-        y: Math.floor(pixelPosition.y / TILE_SIZE)
-      }
-    }
-
-    function arePlayerAndGangsterColliding(player, gangster) {
-      const gangster_width = gangster.direction.y !== 0 ? CAR_WIDTH : CAR_LENGTH
-      const gangster_height = gangster.direction.y !== 0 ? CAR_LENGTH : CAR_WIDTH
-
-      const player_width = player.direction.y !== 0 ? CAR_WIDTH : CAR_LENGTH
-      const player_height = player.direction.y !== 0 ? CAR_LENGTH : CAR_WIDTH
-
-      return (
-        player.position.x + (TILE_SIZE - player_width)/2 < gangster.position.x + gangster_width + (TILE_SIZE - gangster_width)/2 &&
-        player.position.x + player_width + (TILE_SIZE - player_width)/2 > gangster.position.x + (TILE_SIZE - gangster_width)/2 &&
-        player.position.y + (TILE_SIZE - player_height)/2 < gangster.position.y + gangster_height + (TILE_SIZE - gangster_height)/2 &&
-        player.position.y + player_height + (TILE_SIZE - player_height)/2 > gangster.position.y + (TILE_SIZE - gangster_height)/2
-      )
-    }
-
-    function isExactlyOnGrid(gangster) {
-      return gangster.position.x % TILE_SIZE === 0 && gangster.position.y % TILE_SIZE === 0
-    }
-
-    function moveGangster(gangster) {
-      gangster.position = {
-        x: gangster.position.x + gangster.direction.x * gangster.speed,
-        y: gangster.position.y + gangster.direction.y * gangster.speed,
-      }
-    }
-
     function restartGameOnCollision(player, gangster) {
-      if(arePlayerAndGangsterColliding(player, gangster)) {
+      if(areCarsColliding(player, gangster)) {
         highscore = highscore > state.money.delivered ? highscore : state.money.delivered
         lastscore = state.money.delivered
         startGame()
@@ -345,12 +289,77 @@ function updateGangsters () {
   })
 }
 
-function render() {
+function areCarsColliding(car1, car2) {
+  const gangster_width = car2.direction.y !== 0 ? CAR_WIDTH : CAR_LENGTH
+  const gangster_height = car2.direction.y !== 0 ? CAR_LENGTH : CAR_WIDTH
+
+  const player_width = car1.direction.y !== 0 ? CAR_WIDTH : CAR_LENGTH
+  const player_height = car1.direction.y !== 0 ? CAR_LENGTH : CAR_WIDTH
+
+  return (
+    car1.position.x + (TILE_SIZE - player_width)/2 < car2.position.x + gangster_width + (TILE_SIZE - gangster_width)/2 &&
+    car1.position.x + player_width + (TILE_SIZE - player_width)/2 > car2.position.x + (TILE_SIZE - gangster_width)/2 &&
+    car1.position.y + (TILE_SIZE - player_height)/2 < car2.position.y + gangster_height + (TILE_SIZE - gangster_height)/2 &&
+    car1.position.y + player_height + (TILE_SIZE - player_height)/2 > car2.position.y + (TILE_SIZE - gangster_height)/2
+  )
+}
+
+function moveCar(car) {
+  car.position = {
+    x: car.position.x + car.direction.x * car.speed,
+    y: car.position.y + car.direction.y * car.speed,
+  }
+}
+
+function changeCarDirectionRandomly(car) {
+  const availableDirections = getAvailableDirectionsWithoutGoingBack(car.position, car.direction)
+
+  if(availableDirections.length === 0) {
+    car.direction.x = -car.direction.x
+    car.direction.y = -car.direction.y
+  } else {
+    car.direction = availableDirections[Math.floor(Math.random() * availableDirections.length)]
+  }
+}
+
+function getAvailableDirectionsWithoutGoingBack(position, direction) {
+  const worldPosition = getWorldPosition(position)
+
+  const availableDirections = []
+
+  const leftTile = getTile(worldPosition.x - 1, worldPosition.y)
+  const rightTile = getTile(worldPosition.x + 1, worldPosition.y)
+  const upTile = getTile(worldPosition.x, worldPosition.y - 1 )
+  const downTile = getTile(worldPosition.x, worldPosition.y + 1)
+
+
+  if(leftTile && leftTile.type === 'street' && direction.x !== 1) {
+    availableDirections.push({x: -1, y: 0})
+  }
+  if(rightTile && rightTile.type === 'street' && direction.x !== -1) {
+    availableDirections.push({x: 1, y: 0})
+  }
+  if(upTile && upTile.type === 'street' && direction.y !== 1) {
+    availableDirections.push({x: 0, y: -1})
+  }
+  if(downTile && downTile.type === 'street' && direction.y !== -1) {
+    availableDirections.push({x: 0, y: 1})
+  }
+
+  return availableDirections
+}
+
+function isExactlyOnGrid(car) {
+  return car.position.x % TILE_SIZE === 0 && car.position.y % TILE_SIZE === 0
+}
+
+function render(iterator) {
   ctx.clearRect(0, 0, CANVAS.width, CANVAS.height)
 
   renderWorld(state.world)
   renderBuildings(state.buildings)
   renderGangsters(state.gangsters)
+  if (state.policeCar) renderPoliceCar(state.policeCar, iterator)
   renderPlayer(state.player)
 
   if (!state.started) {
@@ -400,7 +409,7 @@ function render() {
           if (tile.bank && state.money.current > 0) {
             renderLoadingZone('green', x, y)
           }
-          if (tile.police && state.money.current > 0) {
+          if (tile.police && state.money.current > 0 && !state.policeCar && state.gangsters.length / (totalNumberOfPoliceCars + 1) >= 5) {
             renderLoadingZone('green', x, y)
           }
           if (tile.shop) {
@@ -456,10 +465,16 @@ function render() {
     renderCar(player.position, player.direction, images.transporter)
   }
 
+  function renderPoliceCar(policeCar, iterator) {
+    const offset = iterator % 8 < 4 ? 1 : 0
+    renderCar(policeCar.position, policeCar.direction, images.policeCar, offset)
+  }
+
   function renderGangsters(gangsters) {
     gangsters.forEach(gangster => {
+      if (gangster.caught) return
       if(gangster.active) {
-        renderCar(gangster.position, gangster.direction, images.gangster_chasing)
+        renderCar(gangster.position, gangster.direction, images.gangsterChasing)
       } else {
         renderCar(gangster.position, gangster.direction, images.gangster)
       }
@@ -474,7 +489,8 @@ function render() {
     ctx.fillText(`high score: $${highscore}`, 540, 660)
   }
 
-  function renderCar (position, direction, image) {
+  function renderCar (position, direction, image, offset) {
+    offset = offset || 0
     const center = {
       x: position.x + TILE_SIZE / 2,
       y: position.y + TILE_SIZE / 2
@@ -486,7 +502,7 @@ function render() {
     if (direction.x === -1) ctx.rotate(1/2 * Math.PI)
     if (direction.x === 1) ctx.rotate(3/2 * Math.PI)
 
-    ctx.drawImage(image, -TILE_SIZE / 2, -TILE_SIZE / 2)
+    ctx.drawImage(image, 0, offset * TILE_SIZE, TILE_SIZE, TILE_SIZE, -TILE_SIZE / 2, -TILE_SIZE / 2, TILE_SIZE, TILE_SIZE)
     ctx.restore()
   }
 }
@@ -601,21 +617,30 @@ function startGame () {
 }
 
 
+function createPoliceCar (tilePos) {
+  return createCar(tilePos)
+}
+
 function createGangster () {
   const gangsterBuildings = state.buildings
     .filter(building => building.type === 'gangsterBuilding')
   const gangsterBuilding = gangsterBuildings[Math.floor(Math.random() * gangsterBuildings.length)]
   const streetPos = getStreetForBuildingPosition(gangsterBuilding.position)
+  const car = createCar(streetPos)
+  car.active = false
+  return car
+}
+
+function createCar (tilePos, speed) {
   return {
-    active: false,
     direction: {
       x: 0,
       y: 1
     },
-    speed: 1,
+    speed: speed || 1,
     position: {
-      x: streetPos.x * TILE_SIZE,
-      y: streetPos.y * TILE_SIZE
+      x: tilePos.x * TILE_SIZE,
+      y: tilePos.y * TILE_SIZE
     }
   }
 }
@@ -624,5 +649,12 @@ function getStreetForBuildingPosition ({x,y}) {
   return {
     y: y + 4,
     x: x + 1
+  }
+}
+
+function getWorldPosition(pixelPosition) {
+  return {
+    x: Math.floor(pixelPosition.x / TILE_SIZE),
+    y: Math.floor(pixelPosition.y / TILE_SIZE)
   }
 }
