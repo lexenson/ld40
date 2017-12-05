@@ -32,7 +32,8 @@ const images = {
   resedentials: [
     getImage('building_01'),
     getImage('building_02'),
-    getImage('building_03')
+    getImage('building_03'),
+    getImage('building_04')
   ],
   gangsterBuilding: getImage('building_gangster'),
   bank: getImage('bank'),
