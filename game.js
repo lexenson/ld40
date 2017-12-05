@@ -365,11 +365,6 @@ function render(iterator) {
   if (state.policeCar) renderPoliceCar(state.policeCar, iterator)
   renderPlayer(state.player)
 
-  if (!state.started) {
-    renderStartScreen()
-    return
-  }
-
   for (let y = -1; y < size.height; y++) {
     for (let x = -1; x < size.width; x++) {
       if((x + 1) % (blockSize.width + 1) == 0 && (y) % (blockSize.height + 1) == 0) {
@@ -380,10 +375,15 @@ function render(iterator) {
     }
   }
 
+  if (!state.started) {
+    renderStartScreen()
+    return
+  }
+
   renderMoney(state.money)
 
   function renderStartScreen () {
-    ctx.globalAlpha = 0.5
+    ctx.globalAlpha = 0.6
     ctx.fillStyle = 'black'
     ctx.fillRect(0, 0, size.width * TILE_SIZE, size.height * TILE_SIZE)
     ctx.globalAlpha = 0.2
@@ -392,13 +392,13 @@ function render(iterator) {
     ctx.arc(20 * 16 + 8, 4 * 16 + 8,32,0, 2*Math.PI)
     ctx.fill()
     ctx.globalAlpha = 1
-    ctx.font = '45px Radley'
+    ctx.font = "70px 'Stardos Stencil'"
     const topPosition = 200
-    const title = '💸 Money Transporter 💸'
+    const title = 'Money Transporter'
     const titleSizes = ctx.measureText(title)
     ctx.fillStyle='white'
     ctx.fillText(title,(CANVAS.width - titleSizes.width)/2,topPosition)
-    ctx.font = '25px Radley'
+    ctx.font = "30px 'Stardos Stencil'"
     const explanations = [
       'arrow keys: control your car',
       'space bar: stop the car',
@@ -500,7 +500,7 @@ function render(iterator) {
   }
 
   function renderMoney (money) {
-    ctx.font = '20px Courier'
+    ctx.font = "20px 'Stardos Stencil'"
     ctx.fillStyle='black'
     ctx.fillText(`current:   $${money.current}`,20,660);
     ctx.fillText(`delivered: $${money.delivered}`,220,660);
