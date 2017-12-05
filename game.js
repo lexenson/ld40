@@ -7,7 +7,8 @@ const CAR_WIDTH = 8
 const PLAYER_SPEED = 2
 const MAX_SHOP_MONEY = 200
 const MAX_BANK_MONEY = 400
-const MAX_POLICE_MONEY = 200
+const MAX_POLICE_MONEY = 100
+const ALLOW_POLICECAR_EVERY = 3
 
 let highscore = 0
 let lastscore = 0
@@ -169,7 +170,7 @@ function updateMoney() {
       currentTile.shop.money -= 1
       state.money.current += 1
     }
-  } else if (currentTile.police && state.money.current > 0 && !state.policeCar && state.gangsters.length / (totalNumberOfPoliceCars + 1) >= 5) {
+  } else if (currentTile.police && state.money.current > 0 && !state.policeCar && state.gangsters.length / (totalNumberOfPoliceCars + 1) >= ALLOW_POLICECAR_EVERY) {
     if (currentTile.police.money < MAX_POLICE_MONEY) {
       state.money.current -= 1
       currentTile.police.money += 1
@@ -409,7 +410,7 @@ function render(iterator) {
           if (tile.bank && state.money.current > 0) {
             renderLoadingZone('green', x, y)
           }
-          if (tile.police && state.money.current > 0 && !state.policeCar && state.gangsters.length / (totalNumberOfPoliceCars + 1) >= 5) {
+          if (tile.police && state.money.current > 0 && !state.policeCar && state.gangsters.length / (totalNumberOfPoliceCars + 1) >= ALLOW_POLICECAR_EVERY) {
             renderLoadingZone('green', x, y)
           }
           if (tile.shop) {
