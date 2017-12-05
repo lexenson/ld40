@@ -387,13 +387,13 @@ function render(iterator) {
     ctx.fillStyle = 'black'
     ctx.fillRect(0, 0, size.width * TILE_SIZE, size.height * TILE_SIZE)
     ctx.globalAlpha = 1
-    ctx.font = '45px Courier'
+    ctx.font = '45px Radley'
     const topPosition = 200
     const title = '💸 Money Transporter 💸'
     const titleSizes = ctx.measureText(title)
     ctx.fillStyle='white'
     ctx.fillText(title,(CANVAS.width - titleSizes.width)/2,topPosition)
-    ctx.font = '25px Courier'
+    ctx.font = '25px Radley'
     const explanations = [
       'arrow keys: control your car',
       'space bar: stop the car',
